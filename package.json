@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node -r esm node_modules/.bin/mocha --timeout 999999 --colors test/**/*.test.js --exit",
     "start": "node index"
   },
   "repository": {
@@ -21,6 +21,8 @@
     "esm": "^3.2.25"
   },
   "dependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^7.0.1",
     "sanctuary": "^3.0.0",
     "yargs": "^15.1.0"
   }

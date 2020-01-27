@@ -1,18 +1,18 @@
 import { spawn } from 'child_process'
 
-export const createFFmpeg = (path) => {
+export const createFFmpeg = (path, inputs, ffmpegArguments, output) => {
 	return {
 		path: path || 'ffmpeg',
-		inputs: [],
-		arguments: [],
-		output: undefined
+		inputs: inputs || [],
+		arguments: ffmpegArguments || [],
+		output
 	}
 }
 
-export const createInput = (path) => {
+export const createInput = (path, inputArguments) => {
 	return {
 		path,
-		arguments: []
+		arguments: inputArguments || []
 	}
 }
 
@@ -33,21 +33,11 @@ export const setOutput = (output) => (ffmpeg) => {
 	}
 }
 
-export const addFFmpegArgument = (argument) => (ffmpeg) => {
+export const addArgument = (argument) => (input) => {
 	return {
-		...ffmpeg,
+		...input,
 		arguments: [
-			...ffmpeg.arguments,
-			argument
-		]
-	}
-}
-
-export const addInputArgument = (argument) => (ffmpegInput) => {
-	return {
-		...ffmpegInput,
-		arguments: [
-			...ffmpegInput.arguments,
+			...input.arguments,
 			argument
 		]
 	}
@@ -58,6 +48,22 @@ export const createArgument = (argument) => (value) => {
 		argument,
 		value: value ? value.toString() : undefined
 	}
+}
+
+export const inputArguments = {
+  createSeekArgument: createArgument('-ss'),
+
+  createSeekEofArgument: createArgument('-sseof'),
+  
+  createDurationArgument: createArgument('-t'),
+}
+
+export const ffmpegArguments = {
+  createOverrideArgument: createArgument('-y'),
+
+  createVideoFilterArgument: createArgument('-vf'),
+
+  createFilterComplexArgument: createArgument('-filter_complex')
 }
 
 const filterEmpty = (value) => {

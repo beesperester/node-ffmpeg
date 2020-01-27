@@ -17,11 +17,6 @@ import {
 	run
 } from './src/ffmpeg'
 
-const input = 'data/Alexis Adams - Nasty Namaste.mp4'
-const output = 'data/Alexis Adams - Nasty Namaste.gif'
-
-
-
 const argv = yargs
 	.command('extract <input> <output>', 'convert video to gif', (yargs) => {
 		yargs
