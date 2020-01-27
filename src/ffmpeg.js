@@ -43,6 +43,20 @@ export const addArgument = (argument) => (input) => {
 	}
 }
 
+export const setArgument = (argument) => (input) => {
+  const filteredArguments = input.arguments.filter((input) => {
+    return input.argument != argument.argument
+  })
+
+  return {
+    ...input,
+    arguments: [
+      ...filteredArguments,
+      argument
+    ]
+  }
+}
+
 export const createArgument = (argument) => (value) => {
 	return {
 		argument,
@@ -94,24 +108,24 @@ export const compileFFmpeg = (ffmpeg) => {
 	return inputs.concat(ffmpegAguments).concat([`${ffmpeg.output}`])
 }
 
-export const run = (onStdout)(onStderr)(ffmpeg) => {
+export const run = (onStdout) => (onStderr) => (onExit) => (ffmpeg) => {
   const context = this
 	const args = compileFFmpeg(ffmpeg)
 
 	const process = spawn(ffmpeg.path, args)
 
-  process.stdout.setEncoding('utf8'))
+  process.stdout.setEncoding('utf8')
   process.stdout.on('data', function (data) {
     onStdout.call(context, data)
   });
 
-  process.stderr.setEncoding('utf8'
+  process.stderr.setEncoding('utf8')
   process.stderr.on('data', function (data) {
     onStderr.call(context, data)
   });
 
   process.on('exit', function (code) {
-    console.log('exit with code ', code)
+    onExit.call(context, code)
   });
 }
 

@@ -7,6 +7,7 @@ import {
   createInput,
   createArgument,
   addArgument,
+  setArgument,
   addInput,
   compileArgument,
   compileInput,
@@ -50,7 +51,7 @@ describe('tests ffmpeg module', function() {
     })
   })
 
-  describe('tests add', function() {
+  describe('tests add / set', function() {
     it('addInput', function() {
       const ffmpeg = createFFmpeg()
       const input = createInput('foobar')
@@ -71,6 +72,27 @@ describe('tests ffmpeg module', function() {
       const argument = createArgument('-t')(5)
 
       const received = addArgument(argument)(ffmpeg)
+      const expected = {
+        ...ffmpeg,
+        arguments: [
+          argument
+        ]
+      }
+
+      expect(received).to.deep.equal(expected)
+    })
+
+    it('setArgument', function() {
+      const argument = createArgument('-t')(5)
+      const ffmpeg = createFFmpeg(
+        'ffmpeg', 
+        [], 
+        [
+          argument
+        ]
+      )
+
+      const received = setArgument(argument)(ffmpeg)
       const expected = {
         ...ffmpeg,
         arguments: [
