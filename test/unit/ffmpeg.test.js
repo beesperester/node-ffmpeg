@@ -8,71 +8,129 @@ import {
   createArgument,
   addArgument,
   addInput,
+  compileArgument,
+  compileInput,
+  compileFFmpeg,
   inputArguments,
   ffmpegArguments
 } from '../../src/ffmpeg'
 
 describe('tests ffmpeg module', function() {
-  it('createFFmpeg', function() {
-    const received = createFFmpeg()
-    const expected = {
-      path: 'ffmpeg',
-      inputs: [],
-      arguments: [],
-      output: undefined
-    }
+  describe('tests create', function() {
+    it('createFFmpeg', function() {
+      const received = createFFmpeg()
+      const expected = {
+        path: 'ffmpeg',
+        inputs: [],
+        arguments: [],
+        output: undefined
+      }
 
-    expect(received).to.deep.equal(expected)
+      expect(received).to.deep.equal(expected)
+    })
+
+    it('createInput', function() {
+      const received = createInput('foobar')
+      const expected = {
+        path: 'foobar',
+        arguments: []
+      }
+
+      expect(received).to.deep.equal(expected)
+    })
+
+    it('createArgument', function() {
+      const received = createArgument('-t')(5)
+      const expected = {
+        argument: '-t',
+        value: '5'
+      }
+
+      expect(received).to.deep.equal(expected)
+    })
   })
 
-  it('createInput', function() {
-    const received = createInput('foobar')
-    const expected = {
-      path: 'foobar',
-      arguments: []
-    }
+  describe('tests add', function() {
+    it('addInput', function() {
+      const ffmpeg = createFFmpeg()
+      const input = createInput('foobar')
 
-    expect(received).to.deep.equal(expected)
+      const received = addInput(input)(ffmpeg)
+      const expected = {
+        ...ffmpeg,
+        inputs: [
+          input
+        ]
+      }
+
+      expect(received).to.deep.equal(expected)
+    })
+
+    it('addArgument', function() {
+      const ffmpeg = createFFmpeg()
+      const argument = createArgument('-t')(5)
+
+      const received = addArgument(argument)(ffmpeg)
+      const expected = {
+        ...ffmpeg,
+        arguments: [
+          argument
+        ]
+      }
+
+      expect(received).to.deep.equal(expected)
+    })
   })
 
-  it('createArgument', function() {
-    const received = createArgument('-t')(5)
-    const expected = {
-      argument: '-t',
-      value: '5'
-    }
+  describe('tests compile', function() {
+    it('compileArgument', function() {
+      const argument = createArgument('-t')(5)
+      
+      const received = compileArgument(argument)
+      const expected = ['-t', '5']
 
-    expect(received).to.deep.equal(expected)
-  })
+      expect(received).to.deep.equal(expected)
+    })
 
-  it('addInput', function() {
-    const ffmpeg = createFFmpeg()
-    const input = createInput('foobar')
+    it('compileArgument without value', function() {
+      const argument = createArgument('-t')()
+      
+      const received = compileArgument(argument)
+      const expected = ['-t']
 
-    const received = addInput(input)(ffmpeg)
-    const expected = {
-      ...ffmpeg,
-      inputs: [
-        input
-      ]
-    }
+      expect(received).to.deep.equal(expected)
+    })
 
-    expect(received).to.deep.equal(expected)
-  })
-
-  it('addArgument', function() {
-    const ffmpeg = createFFmpeg()
-    const argument = createArgument('-t')(5)
-
-    const received = addArgument(argument)(ffmpeg)
-    const expected = {
-      ...ffmpeg,
-      arguments: [
+    it('compileInput', function() {
+      const argument = createArgument('-t')(5)
+      const input = createInput('foobar', [
         argument
-      ]
-    }
+      ])
 
-    expect(received).to.deep.equal(expected)
+      const received = compileInput(input)
+      const expected = ['-t', '5', '-i', 'foobar']
+
+      expect(received).to.deep.equal(expected)
+    })
+
+    it('compileFFmpeg', function() {
+      const input = createInput('foobar')
+      const argument = createArgument('-t')(5)
+      const ffmpeg = createFFmpeg(
+        'ffmpeg', [
+          input
+        ],
+        [
+          argument
+        ], 
+        'output'
+      )
+
+      const received = compileFFmpeg(ffmpeg)
+      const expected = ['-i', 'foobar', '-t', '5', 'output']
+
+      expect(received).to.deep.equal(expected)
+    })
   })
 
   describe('tests inputArguments', function() {

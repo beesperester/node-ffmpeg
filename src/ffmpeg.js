@@ -94,10 +94,25 @@ export const compileFFmpeg = (ffmpeg) => {
 	return inputs.concat(ffmpegAguments).concat([`${ffmpeg.output}`])
 }
 
-export const run = (ffmpeg) => {
+export const run = (onStdout)(onStderr)(ffmpeg) => {
+  const context = this
 	const args = compileFFmpeg(ffmpeg)
 
-	return spawn(ffmpeg.path, args)
+	const process = spawn(ffmpeg.path, args)
+
+  process.stdout.setEncoding('utf8'))
+  process.stdout.on('data', function (data) {
+    onStdout.call(context, data)
+  });
+
+  process.stderr.setEncoding('utf8'
+  process.stderr.on('data', function (data) {
+    onStderr.call(context, data)
+  });
+
+  process.on('exit', function (code) {
+    console.log('exit with code ', code)
+  });
 }
 
 export default createFFmpeg
