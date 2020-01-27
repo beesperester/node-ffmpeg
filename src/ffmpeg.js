@@ -16,7 +16,7 @@ export const createInput = (path) => {
 	}
 }
 
-export const addInput = (ffmpeg) => (input) => {
+export const addInput = (input) => (ffmpeg) => {
 	return {
 		...ffmpeg,
 		inputs: [
@@ -26,14 +26,14 @@ export const addInput = (ffmpeg) => (input) => {
 	};
 }
 
-export const setOutput = (ffmpeg) => (output) => {
+export const setOutput = (output) => (ffmpeg) => {
 	return {
 		...ffmpeg,
 		output
 	}
 }
 
-export const addFFmpegArgument = (ffmpeg) => (argument) => {
+export const addFFmpegArgument = (argument) => (ffmpeg) => {
 	return {
 		...ffmpeg,
 		arguments: [
@@ -43,7 +43,7 @@ export const addFFmpegArgument = (ffmpeg) => (argument) => {
 	}
 }
 
-export const addInputArgument = (ffmpegInput) => (argument) => {
+export const addInputArgument = (argument) => (ffmpegInput) => {
 	return {
 		...ffmpegInput,
 		arguments: [
@@ -56,15 +56,19 @@ export const addInputArgument = (ffmpegInput) => (argument) => {
 export const createArgument = (argument) => (value) => {
 	return {
 		argument,
-		value: `${value}`
+		value: value ? value.toString() : undefined
 	}
+}
+
+const filterEmpty = (value) => {
+	return value ? value.trim() != '' : false
 }
 
 export const compileArgument = (argument) => {
 	return [
 		argument.argument,
 		argument.value
-	]
+	].filter(filterEmpty)
 }
 
 const reduceArray = (previous, current) => {
@@ -86,8 +90,6 @@ export const compileFFmpeg = (ffmpeg) => {
 
 export const run = (ffmpeg) => {
 	const args = compileFFmpeg(ffmpeg)
-
-	console.log(args)
 
 	return spawn(ffmpeg.path, args)
 }

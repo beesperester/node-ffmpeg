@@ -19,5 +19,9 @@
   "homepage": "https://github.com/beesperester/node-ffmpeg#readme",
   "devDependencies": {
     "esm": "^3.2.25"
+  },
+  "dependencies": {
+    "sanctuary": "^3.0.0",
+    "yargs": "^15.1.0"
   }
 }
