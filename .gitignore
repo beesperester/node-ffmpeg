@@ -1,3 +1,12 @@
+# app
+data
+
+# editor
+.vscode
+
+# macos
+.DS_Store
+
 # Logs
 logs
 *.log
