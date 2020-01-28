@@ -16,9 +16,9 @@ import {
   ffmpegArguments
 } from '../../src/ffmpeg'
 
-describe('tests ffmpeg module', function() {
-  describe('tests create', function() {
-    it('createFFmpeg', function() {
+describe('tests ffmpeg module', function () {
+  describe('tests create', function () {
+    it('createFFmpeg', function () {
       const received = createFFmpeg()
       const expected = {
         path: 'ffmpeg',
@@ -30,7 +30,7 @@ describe('tests ffmpeg module', function() {
       expect(received).to.deep.equal(expected)
     })
 
-    it('createInput', function() {
+    it('createInput', function () {
       const received = createInput('foobar')
       const expected = {
         path: 'foobar',
@@ -40,7 +40,7 @@ describe('tests ffmpeg module', function() {
       expect(received).to.deep.equal(expected)
     })
 
-    it('createArgument', function() {
+    it('createArgument', function () {
       const received = createArgument('-t')(5)
       const expected = {
         argument: '-t',
@@ -51,8 +51,8 @@ describe('tests ffmpeg module', function() {
     })
   })
 
-  describe('tests add / set', function() {
-    it('addInput', function() {
+  describe('tests add / set', function () {
+    it('addInput', function () {
       const ffmpeg = createFFmpeg()
       const input = createInput('foobar')
 
@@ -67,7 +67,7 @@ describe('tests ffmpeg module', function() {
       expect(received).to.deep.equal(expected)
     })
 
-    it('addArgument', function() {
+    it('addArgument', function () {
       const ffmpeg = createFFmpeg()
       const argument = createArgument('-t')(5)
 
@@ -82,11 +82,11 @@ describe('tests ffmpeg module', function() {
       expect(received).to.deep.equal(expected)
     })
 
-    it('setArgument', function() {
+    it('setArgument', function () {
       const argument = createArgument('-t')(5)
       const ffmpeg = createFFmpeg(
-        'ffmpeg', 
-        [], 
+        'ffmpeg',
+        [],
         [
           argument
         ]
@@ -104,26 +104,26 @@ describe('tests ffmpeg module', function() {
     })
   })
 
-  describe('tests compile', function() {
-    it('compileArgument', function() {
+  describe('tests compile', function () {
+    it('compileArgument', function () {
       const argument = createArgument('-t')(5)
-      
+
       const received = compileArgument(argument)
       const expected = ['-t', '5']
 
       expect(received).to.deep.equal(expected)
     })
 
-    it('compileArgument without value', function() {
+    it('compileArgument without value', function () {
       const argument = createArgument('-t')()
-      
+
       const received = compileArgument(argument)
       const expected = ['-t']
 
       expect(received).to.deep.equal(expected)
     })
 
-    it('compileInput', function() {
+    it('compileInput', function () {
       const argument = createArgument('-t')(5)
       const input = createInput('foobar', [
         argument
@@ -135,16 +135,16 @@ describe('tests ffmpeg module', function() {
       expect(received).to.deep.equal(expected)
     })
 
-    it('compileFFmpeg', function() {
+    it('compileFFmpeg', function () {
       const input = createInput('foobar')
       const argument = createArgument('-t')(5)
       const ffmpeg = createFFmpeg(
         'ffmpeg', [
-          input
-        ],
+        input
+      ],
         [
           argument
-        ], 
+        ],
         'output'
       )
 
@@ -155,8 +155,8 @@ describe('tests ffmpeg module', function() {
     })
   })
 
-  describe('tests inputArguments', function() {
-    it('createSeekArgument', function() {
+  describe('tests inputArguments', function () {
+    it('createSeekArgument', function () {
       const received = inputArguments.createSeekArgument(60)
       const expected = {
         argument: '-ss',
@@ -166,7 +166,7 @@ describe('tests ffmpeg module', function() {
       expect(received).to.deep.equal(expected)
     })
 
-    it('createSeekEofArgument', function() {
+    it('createSeekEofArgument', function () {
       const received = inputArguments.createSeekEofArgument(-60)
       const expected = {
         argument: '-sseof',
@@ -176,7 +176,7 @@ describe('tests ffmpeg module', function() {
       expect(received).to.deep.equal(expected)
     })
 
-    it('createDurationArgument', function() {
+    it('createDurationArgument', function () {
       const received = inputArguments.createDurationArgument(5)
       const expected = {
         argument: '-t',
@@ -187,8 +187,8 @@ describe('tests ffmpeg module', function() {
     })
   })
 
-  describe('tests ffmpegArguments', function() {
-    it('createOverrideArgument', function() {
+  describe('tests ffmpegArguments', function () {
+    it('createOverrideArgument', function () {
       const received = ffmpegArguments.createOverrideArgument()
       const expected = {
         argument: '-y',
@@ -198,7 +198,7 @@ describe('tests ffmpeg module', function() {
       expect(received).to.deep.equal(expected)
     })
 
-    it('createVideoFilterArgument', function() {
+    it('createVideoFilterArgument', function () {
       const received = ffmpegArguments.createVideoFilterArgument()
       const expected = {
         argument: '-vf',
@@ -208,7 +208,7 @@ describe('tests ffmpeg module', function() {
       expect(received).to.deep.equal(expected)
     })
 
-    it('createFilterComplexArgument', function() {
+    it('createFilterComplexArgument', function () {
       const received = ffmpegArguments.createFilterComplexArgument()
       const expected = {
         argument: '-filter_complex',
