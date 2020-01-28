@@ -3,7 +3,7 @@ import S from 'sanctuary'
 
 import { libffmpeg } from '../ffmpeg'
 
-export const command = 'gif <input> [s,e,t] <output>'
+export const command = 'gif <input> [s,e,t]'
 
 export const describe = ''
 
@@ -53,6 +53,20 @@ const fileExists = (file) => {
 
 const noop = (x) => x
 
+const stripExtension = (path) => {
+	const parts = path.split('.')
+
+	parts.pop()
+
+	return parts.join('.')
+}
+
+const prepareOutput = (argv) => {
+	const outputFromInput = `${stripExtension(argv.input)}.gif`
+
+	return argv.output ? argv.output : outputFromInput
+}
+
 const prepareInput = (argv) => S.pipe([
 	fileExists,
 	S.map(libffmpeg.createInput),
@@ -69,7 +83,7 @@ const prepareFFmpeg = (argv) => S.pipe([
 	S.chain(S.encase((input) => libffmpeg.createFFmpeg(ffmpegPath, [input]))),
 	argv.override ? S.map(libffmpeg.setArgument(libffmpeg.ffmpegArguments.createOverrideArgument())) : noop,
 	S.map(libffmpeg.setArgument(filterComplexArgument(argv.width))),
-	S.map(libffmpeg.setOutput(argv.output))
+	S.map(libffmpeg.setOutput(prepareOutput(argv)))
 ])
 
 export const handler = (argv) => {
