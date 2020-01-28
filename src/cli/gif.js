@@ -1,7 +1,7 @@
 import fs from 'fs'
 import S from 'sanctuary'
 
-import * as libffmpeg from '../ffmpeg'
+import { libffmpeg } from '../ffmpeg'
 
 export const command = 'gif <input> [s,e,t] <output>'
 
@@ -38,6 +38,11 @@ export const builder = (yargs) => {
 				default: 320,
 				describe: 'width of gif',
 				type: 'number'
+			},
+			y: {
+				alias: 'override',
+				describe: 'override existing file',
+				type: 'boolean'
 			}
 		})
 }
@@ -51,28 +56,28 @@ const noop = (x) => x
 const prepareInput = (argv) => S.pipe([
 	fileExists,
 	S.map(libffmpeg.createInput),
-	argv.seek ? S.map(libffmpeg.addArgument(libffmpeg.inputArguments.createSeekArgument(argv.seek))) : noop,
-	argv.seek_eof ? S.map(libffmpeg.addArgument(libffmpeg.inputArguments.createSeekEofArgument(argv.seek_eof))) : noop,
-	argv.duration ? S.map(libffmpeg.addArgument(libffmpeg.inputArguments.createDurationArgument(argv.duration))) : noop
+	argv.seek ? S.map(libffmpeg.setArgument(libffmpeg.inputArguments.createSeekArgument(argv.seek))) : noop,
+	argv.seek_eof ? S.map(libffmpeg.setArgument(libffmpeg.inputArguments.createSeekEofArgument(argv.seek_eof))) : noop,
+	argv.duration ? S.map(libffmpeg.setArgument(libffmpeg.inputArguments.createDurationArgument(argv.duration))) : noop
 ])
 
 const filterComplexArgument = (width) => libffmpeg.ffmpegArguments.createFilterComplexArgument(`[0:v] fps=12,scale=w=${width}:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1`)
 
-const prepareFFmpeg = (argv) => (input) => S.pipe([
-	libffmpeg.setArgument(libffmpeg.ffmpegArguments.createOverrideArgument()),
-	libffmpeg.addInput(input),
-	libffmpeg.setArgument(filterComplexArgument(argv.width)),
-	libffmpeg.setOutput(argv.output)
+const ffmpegPath = 'ffmpeg'
+
+const prepareFFmpeg = (argv) => S.pipe([
+	S.chain(S.encase((input) => libffmpeg.createFFmpeg(ffmpegPath, [input]))),
+	argv.override ? S.map(libffmpeg.setArgument(libffmpeg.ffmpegArguments.createOverrideArgument())) : noop,
+	S.map(libffmpeg.setArgument(filterComplexArgument(argv.width))),
+	S.map(libffmpeg.setOutput(argv.output))
 ])
 
 export const handler = (argv) => {
 	const input = prepareInput(argv)(argv.input)
 
-	if (S.isRight(input)) {
-		const ffmpeg = libffmpeg.createFFmpeg()
+	const ffmpeg = prepareFFmpeg(argv)(input)
 
-		const createGif = prepareFFmpeg(argv)(input.value)(ffmpeg)
-
+	if (S.isRight(ffmpeg)) {
 		libffmpeg.run((data) => {
 			console.log('stdout: ' + data);
 		})((data) => {
@@ -81,7 +86,7 @@ export const handler = (argv) => {
 			}
 		})((code) => {
 			console.log('child process exited with code ' + code);
-		})(createGif)
+		})(ffmpeg.value)
 	}
 }
 
