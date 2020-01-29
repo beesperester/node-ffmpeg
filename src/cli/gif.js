@@ -70,9 +70,29 @@ const prepareOutput = (argv) => {
 const prepareInput = (argv) => S.pipe([
 	fileExists,
 	S.map(libffmpeg.createInput),
-	argv.seek ? S.map(libffmpeg.setArgument(libffmpeg.inputArguments.createSeekArgument(argv.seek))) : noop,
-	argv.seek_eof ? S.map(libffmpeg.setArgument(libffmpeg.inputArguments.createSeekEofArgument(argv.seek_eof))) : noop,
-	argv.duration ? S.map(libffmpeg.setArgument(libffmpeg.inputArguments.createDurationArgument(argv.duration))) : noop
+	argv.seek
+		? S.chain(
+			S.encase(
+				libffmpeg.setArgument(
+					libffmpeg.inputArguments.createSeekArgument(argv.seek)
+				)
+			)
+		) : noop,
+	argv.seek_eof
+		? S.chain(
+			S.encase(
+				libffmpeg.setArgument(
+					libffmpeg.inputArguments.createSeekEofArgument(argv.seek_eof)
+				)
+			)
+		) : noop,
+	argv.duration
+		? S.chain(
+			S.encase(
+				libffmpeg.setArgument(libffmpeg.inputArguments.createDurationArgument(argv.duration)
+				)
+			)
+		) : noop
 ])
 
 const filterComplexArgument = (width) => libffmpeg.ffmpegArguments.createFilterComplexArgument(`[0:v] fps=12,scale=w=${width}:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1`)
@@ -80,10 +100,33 @@ const filterComplexArgument = (width) => libffmpeg.ffmpegArguments.createFilterC
 const ffmpegPath = 'ffmpeg'
 
 const prepareFFmpeg = (argv) => S.pipe([
-	S.chain(S.encase((input) => libffmpeg.createFFmpeg(ffmpegPath, [input]))),
-	argv.override ? S.map(libffmpeg.setArgument(libffmpeg.ffmpegArguments.createOverrideArgument())) : noop,
-	S.map(libffmpeg.setArgument(filterComplexArgument(argv.width))),
-	S.map(libffmpeg.setOutput(prepareOutput(argv)))
+	S.chain(S.encase((input) => {
+		const ffmpeg = libffmpeg.createFFmpeg(ffmpegPath)
+
+		return libffmpeg.addInput(input)(ffmpeg)
+	})),
+	argv.override
+		? S.chain(
+			S.encase(
+				libffmpeg.setArgument(
+					libffmpeg.ffmpegArguments.createOverrideArgument()
+				)
+			)
+		) : noop,
+	S.chain(
+		S.encase(
+			libffmpeg.setArgument(
+				filterComplexArgument(argv.width)
+			)
+		)
+	),
+	S.chain(
+		S.encase(
+			libffmpeg.setOutput(
+				prepareOutput(argv)
+			)
+		)
+	)
 ])
 
 export const handler = (argv) => {
