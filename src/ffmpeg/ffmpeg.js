@@ -1,6 +1,6 @@
 // Node related imports
 import fs from 'fs'
-import { spawn } from 'child_process'
+import { spawnSync } from 'child_process'
 import assert from 'assert'
 
 // FFmpeg related imports
@@ -170,26 +170,22 @@ export const compileFFmpeg = (ffmpeg) => {
 	const inputs = ffmpeg.inputs.map(compileInput).reduce(utilities.reduceArray, [])
 	const ffmpegAguments = ffmpeg.arguments.map(compileArgument).reduce(utilities.reduceArray, [])
 
-	return inputs.concat(ffmpegAguments).concat([`${ffmpeg.output}`])
+	let cmdArguments = inputs.concat(ffmpegAguments)
+
+	if (ffmpeg.output) {
+		cmdArguments = cmdArguments.concat([`${ffmpeg.output}`])
+	}
+
+	return cmdArguments
 }
 
-export const run = (onStdout) => (onStderr) => (onExit) => (ffmpeg) => {
-	const context = this
+export const run = (ffmpeg) => {
 	const args = compileFFmpeg(ffmpeg)
 
-	const process = spawn(ffmpeg.path, args)
+	const { stdout, stderr } = spawnSync(ffmpeg.path, args)
 
-	process.stdout.setEncoding('utf8')
-	process.stdout.on('data', function (data) {
-		onStdout.call(context, data)
-	});
-
-	process.stderr.setEncoding('utf8')
-	process.stderr.on('data', function (data) {
-		onStderr.call(context, data)
-	});
-
-	process.on('exit', function (code) {
-		onExit.call(context, code)
-	});
+	return {
+		stdout: stdout.toString('utf8'),
+		stderr: stderr.toString('utf8')
+	}
 }
