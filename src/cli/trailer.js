@@ -37,33 +37,6 @@ export const builder = (yargs) => {
 		})
 }
 
-const fileExists = (file) => {
-	return fs.existsSync(file) ? S.Right(file) : S.Left(new Error(`Missing file at ${file}`))
-}
-
-const stripExtension = (file) => {
-	const parts = file.split('.')
-
-	const extension = parts.pop()
-
-	return {
-		file: parts.join('.'),
-		extension: extension
-	}
-}
-
-const prepareOutput = (path) => (index) => {
-	const { file, extension } = stripExtension(path)
-
-	return `${file}.clip.${index}.${extension}`
-}
-
-const prepareConcatOutput = (path) => {
-	const { file, extension } = stripExtension(path)
-
-	return `${file}.concat.${extension}`
-}
-
 const prepareFFmpeg = (input) => (start) => (duration) => (output) => S.pipe([
 	S.encase(
 		libffmpeg.setArgument(
@@ -194,7 +167,7 @@ export const handler = (argv) => {
 			if (err) throw err;
 
 			// const concatOutput = prepareConcatOutput(argv.input)
-			const concatOutput = path.join(dirname, `${filename}.concat${extension}`)
+			const concatOutput = path.join(dirname, `${filename}.trailer${extension}`)
 
 			console.log(concatOutput)
 

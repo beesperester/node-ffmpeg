@@ -1,4 +1,5 @@
 import fs from 'fs'
+import path from 'path'
 import S from 'sanctuary'
 
 import { libffmpeg } from '../ffmpeg'
@@ -29,7 +30,6 @@ export const builder = (yargs) => {
 			},
 			t: {
 				alias: 'duration',
-				default: 5,
 				describe: 'duration of gif in seconds',
 				type: 'number'
 			},
@@ -47,34 +47,19 @@ export const builder = (yargs) => {
 		})
 }
 
-const fileExists = (file) => {
-	return fs.existsSync(file) ? S.Right(file) : S.Left(new Error(`Missing file at ${file}`))
-}
-
 const noop = (x) => x
 
-const stripExtension = (path) => {
-	const parts = path.split('.')
+const filterComplexArgument = (width) => libffmpeg.ffmpegArguments.createFilterComplexArgument(`[0:v] fps=12,scale=w=${width}:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1`)
 
-	parts.pop()
-
-	return parts.join('.')
-}
-
-const prepareOutput = (argv) => {
-	const outputFromInput = `${stripExtension(argv.input)}.gif`
-
-	return argv.output ? argv.output : outputFromInput
-}
-
-const prepareInput = (argv) => S.pipe([
-	fileExists,
-	S.map(libffmpeg.createInput),
+const prepareFFmpeg = (input) => (argv) => (output) => S.pipe([
+	S.encase(
+		(ffmpeg) => ffmpeg
+	),
 	argv.seek
 		? S.chain(
 			S.encase(
 				libffmpeg.setArgument(
-					libffmpeg.inputArguments.createSeekArgument(argv.seek)
+					libffmpeg.ffmpegArguments.createSeekArgument(argv.seek)
 				)
 			)
 		) : noop,
@@ -82,29 +67,20 @@ const prepareInput = (argv) => S.pipe([
 		? S.chain(
 			S.encase(
 				libffmpeg.setArgument(
-					libffmpeg.inputArguments.createSeekEofArgument(argv.seek_eof)
+					libffmpeg.ffmpegArguments.createSeekEofArgument(argv.seek_eof)
 				)
 			)
 		) : noop,
+	S.chain(
+		S.encase(libffmpeg.addArgument(input))
+	),
 	argv.duration
 		? S.chain(
 			S.encase(
-				libffmpeg.setArgument(libffmpeg.inputArguments.createDurationArgument(argv.duration)
+				libffmpeg.setArgument(libffmpeg.ffmpegArguments.createDurationArgument(argv.duration)
 				)
 			)
-		) : noop
-])
-
-const filterComplexArgument = (width) => libffmpeg.ffmpegArguments.createFilterComplexArgument(`[0:v] fps=12,scale=w=${width}:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1`)
-
-const ffmpegPath = 'ffmpeg'
-
-const prepareFFmpeg = (argv) => S.pipe([
-	S.chain(S.encase((input) => {
-		const ffmpeg = libffmpeg.createFFmpeg(ffmpegPath)
-
-		return libffmpeg.addInput(input)(ffmpeg)
-	})),
+		) : noop,
 	argv.override
 		? S.chain(
 			S.encase(
@@ -122,28 +98,34 @@ const prepareFFmpeg = (argv) => S.pipe([
 	),
 	S.chain(
 		S.encase(
-			libffmpeg.setOutput(
-				prepareOutput(argv)
-			)
+			libffmpeg.setOutput(output)
+		)
+	),
+	S.chain(
+		S.encase(
+			libffmpeg.run
 		)
 	)
 ])
 
 export const handler = (argv) => {
-	const input = prepareInput(argv)(argv.input)
+	// const input = prepareInput(argv)(argv.input)
 
-	const ffmpeg = prepareFFmpeg(argv)(input)
+	const dirname = path.dirname(argv.input)
+	const basename = path.basename(argv.input)
+	const extension = path.extname(argv.input)
+	const filename = basename.replace(extension, '')
+
+	const input = libffmpeg.ffmpegArguments.createInputArgument(argv.input)
+
+	const output = path.join(dirname, `${filename}.gif`)
+
+	const ffmpeg = prepareFFmpeg(input)(argv)(output)(libffmpeg.createFFmpeg())
 
 	if (S.isRight(ffmpeg)) {
-		libffmpeg.run((data) => {
-			console.log('stdout: ' + data);
-		})((data) => {
-			if (data.startsWith('frame=')) {
-				console.log(data);
-			}
-		})((code) => {
-			console.log('child process exited with code ' + code);
-		})(ffmpeg.value)
+		const { stdout, stderr } = ffmpeg.value.result
+
+		console.log(stdout, stderr)
 	}
 }
 
