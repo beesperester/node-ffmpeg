@@ -1,5 +1,10 @@
+// Node related imports
 import fs from 'fs'
+import path from 'path'
 import S from 'sanctuary'
+import temp from 'temp'
+
+temp.track()
 
 
 // FFmpeg related imports
@@ -94,11 +99,11 @@ const prepareFFmpeg = (input) => (start) => (duration) => (output) => S.pipe([
 			libffmpeg.setOutput(output)
 		)
 	),
-	// S.chain(
-	// 	S.encase(
-	// 		libffmpeg.run
-	// 	)
-	// )
+	S.chain(
+		S.encase(
+			libffmpeg.run
+		)
+	)
 ])
 
 const prepareConcatFFmpeg = (input) => (output) => S.pipe([
@@ -148,37 +153,65 @@ export const handler = (argv) => {
 	const duration = probeDuration(argv.input)
 	const clips = []
 
-	for (let i = 0; i < argv.number; i++) {
-		const clipDuration = argv.duration / (argv.number - 1)
-		let clipStart = (duration / argv.number * i) + 1
+	const dirname = path.dirname(argv.input)
+	const basename = path.basename(argv.input)
+	const extension = path.extname(argv.input)
+	const filename = basename.replace(extension, '')
 
-		if (i + 1 == argv.number) {
-			clipStart = duration - argv.duration
+	temp.mkdir(filename, function (err, tempDirectoryPath) {
+		if (err) throw err;
+
+		for (let i = 0; i < argv.number; i++) {
+			const clipDuration = argv.duration / (argv.number - 1)
+			let clipStart = (duration / argv.number * i) + 1
+
+			if (i + 1 == argv.number) {
+				clipStart = duration - argv.duration
+			}
+
+			// const output = prepareOutput(argv.input)(i + 1)
+			const output = path.join(tempDirectoryPath, `clip.${i + 1}${extension}`)
+
+			console.log(output)
+
+			const input = libffmpeg.ffmpegArguments.createInputArgument(argv.input)
+
+			const ffmpeg = prepareFFmpeg(input)(clipStart)(clipDuration)(output)(libffmpeg.createFFmpeg())
+
+			if (S.isRight(ffmpeg)) {
+				clips.push(output)
+				console.log('done', output)
+			}
 		}
 
-		const output = prepareOutput(argv.input)(i + 1)
+		const list = path.join(tempDirectoryPath, 'list.txt')
 
-		const input = libffmpeg.ffmpegArguments.createInputArgument(argv.input)
+		console.log(list)
 
-		const ffmpeg = prepareFFmpeg(input)(clipStart)(clipDuration)(output)(libffmpeg.createFFmpeg())
+		const listData = clips.map((clip) => `file '${clip}'`).join('\n')
 
-		if (S.isRight(ffmpeg)) {
-			clips.push(output)
-			console.log('done', output)
-		}
-	}
+		fs.writeFile(list, listData, function (err) {
+			if (err) throw err;
 
-	const concatOutput = prepareConcatOutput(argv.input)
+			// const concatOutput = prepareConcatOutput(argv.input)
+			const concatOutput = path.join(dirname, `${filename}.concat${extension}`)
 
-	const concatInput = libffmpeg.ffmpegArguments.createInputArgument('/Users/bernhardesperester/git/node-ffmpeg/data/mylist.txt')
-	const concatFFmpeg = prepareConcatFFmpeg(concatInput)(concatOutput)(libffmpeg.createFFmpeg())
+			console.log(concatOutput)
 
-	if (S.isRight(concatFFmpeg)) {
-		const { stdout, stderr } = concatFFmpeg.value.result
+			// const concatInput = libffmpeg.ffmpegArguments.createInputArgument('/Users/bernhardesperester/git/node-ffmpeg/data/mylist.txt')
 
-		console.log(stdout, stderr)
-		console.log('done', concatOutput)
-	}
+			const concatInput = libffmpeg.ffmpegArguments.createInputArgument(list)
+
+			const concatFFmpeg = prepareConcatFFmpeg(concatInput)(concatOutput)(libffmpeg.createFFmpeg())
+
+			if (S.isRight(concatFFmpeg)) {
+				const { stdout, stderr } = concatFFmpeg.value.result
+
+				console.log(stdout, stderr)
+				console.log('done', concatOutput)
+			}
+		})
+	})
 }
 
 export default {
