@@ -14,31 +14,13 @@ import {
 export const createFFmpeg = (path) => {
 	return {
 		path: path || 'ffmpeg',
-		inputs: [],
 		arguments: [],
-		output: undefined
+		output: undefined,
+		result: {
+			stdout: '',
+			stderr: ''
+		}
 	}
-}
-
-export const createInput = (path, inputArguments) => {
-	return {
-		path,
-		arguments: inputArguments || []
-	}
-}
-
-export const addInput = (input) => (ffmpeg) => {
-	utilities.assertType(createInput())(input)
-
-	utilities.assertType(createFFmpeg())(ffmpeg)
-
-	return {
-		...ffmpeg,
-		inputs: [
-			...ffmpeg.inputs,
-			input
-		]
-	};
 }
 
 export const setOutput = (output) => (ffmpeg) => {
@@ -52,56 +34,47 @@ export const setOutput = (output) => (ffmpeg) => {
 	}
 }
 
-export const addArgument = (argument) => (input) => {
-	utilities.assertConstraints(argument)(input)
+export const setResult = (result) => (ffmpeg) => {
+	utilities.assertType(createResult())(result)
+
+	utilities.assertType(createFFmpeg())(ffmpeg)
 
 	return {
-		...input,
+		...ffmpeg,
+		result
+	}
+}
+
+export const addArgument = (argument) => (ffmpeg) => {
+	utilities.assertType(createFFmpeg())(ffmpeg)
+
+	utilities.assertConstraints(argument)(ffmpeg)
+
+	return {
+		...ffmpeg,
 		arguments: [
-			...input.arguments,
+			...ffmpeg.arguments,
 			argument
 		]
 	}
 }
 
-export const addFFmpegArgument = (argument) => (ffmpeg) => {
+export const setArgument = (argument) => (ffmpeg) => {
 	utilities.assertType(createFFmpeg())(ffmpeg)
 
-	return addArgument(argument)(ffmpeg)
-}
+	utilities.assertConstraints(argument)(ffmpeg)
 
-export const addInputArgument = (argument) => (input) => {
-	utilities.assertType(createInput())(input)
-
-	return addArgument(argument)(input)
-}
-
-export const setArgument = (argument) => (input) => {
-	utilities.assertConstraints(argument)(input)
-
-	const filteredArguments = input.arguments.filter((input) => {
-		return input.argument != argument.argument
+	const filteredArguments = ffmpeg.arguments.filter((x) => {
+		return x.argument != argument.argument
 	})
 
 	return {
-		...input,
+		...ffmpeg,
 		arguments: [
 			...filteredArguments,
 			argument
 		]
 	}
-}
-
-export const setFFmpegArgument = (argument) => (ffmpeg) => {
-	utilities.assertType(createFFmpeg())(ffmpeg)
-
-	return setArgument(argument)(ffmpeg)
-}
-
-export const setInputArgument = (argument) => (input) => {
-	utilities.assertType(createInput())(input)
-
-	return setArgument(argument)(input)
 }
 
 export const constraintFlags = {
@@ -113,6 +86,13 @@ export const createConstraint = (argument) => (flag) => {
 	return {
 		argument,
 		flag
+	}
+}
+
+export const createResult = (stdout) => (stderr) => {
+	return {
+		stdout,
+		stderr
 	}
 }
 
@@ -128,7 +108,18 @@ export const createArgument = (argument) => (constraints) => (value) => {
 	}
 }
 
-export const inputArguments = {
+export const ffmpegArguments = {
+	createInputArgument: createArgument('-i')(),
+
+	createOverrideArgument: createArgument('-y')(),
+
+	createVideoFilterArgument: createArgument('-vf')(),
+
+	createFilterComplexArgument: createArgument('-filter_complex')
+		([
+			createConstraint('-vf')(constraintFlags.mustNotExist)
+		]),
+
 	createSeekArgument: createArgument('-ss')
 		([
 			createConstraint('-sseof')(constraintFlags.mustNotExist)
@@ -142,17 +133,6 @@ export const inputArguments = {
 	createDurationArgument: createArgument('-t')(),
 }
 
-export const ffmpegArguments = {
-	createOverrideArgument: createArgument('-y')(),
-
-	createVideoFilterArgument: createArgument('-vf')(),
-
-	createFilterComplexArgument: createArgument('-filter_complex')
-		([
-			createConstraint('-vf')(constraintFlags.mustNotExist)
-		])
-}
-
 export const compileArgument = (argument) => {
 	return [
 		argument.argument,
@@ -160,23 +140,14 @@ export const compileArgument = (argument) => {
 	].filter(utilities.filterEmpty)
 }
 
-export const compileInput = (input) => {
-	const inputArguments = input.arguments.map(compileArgument).reduce(utilities.reduceArray, [])
-
-	return inputArguments.concat(['-i', `${input.path}`])
-}
-
 export const compileFFmpeg = (ffmpeg) => {
-	const inputs = ffmpeg.inputs.map(compileInput).reduce(utilities.reduceArray, [])
-	const ffmpegAguments = ffmpeg.arguments.map(compileArgument).reduce(utilities.reduceArray, [])
-
-	let cmdArguments = inputs.concat(ffmpegAguments)
+	let ffmpegAguments = ffmpeg.arguments.map(compileArgument).reduce(utilities.reduceArray, [])
 
 	if (ffmpeg.output) {
-		cmdArguments = cmdArguments.concat([`${ffmpeg.output}`])
+		ffmpegAguments = ffmpegAguments.concat([`${ffmpeg.output}`])
 	}
 
-	return cmdArguments
+	return ffmpegAguments
 }
 
 export const run = (ffmpeg) => {
@@ -184,8 +155,9 @@ export const run = (ffmpeg) => {
 
 	const { stdout, stderr } = spawnSync(ffmpeg.path, args)
 
-	return {
-		stdout: stdout.toString('utf8'),
-		stderr: stderr.toString('utf8')
-	}
+	const result = createResult
+		(stdout.toString('utf8'))
+		(stderr.toString('utf8'))
+
+	return setResult(result)(ffmpeg)
 }

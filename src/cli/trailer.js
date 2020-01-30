@@ -50,7 +50,7 @@ const stripExtension = (file) => {
 const prepareOutput = (path) => (index) => {
 	const { file, extension } = stripExtension(path)
 
-	return `${file}.${index}.${extension}`
+	return `${file}.clip.${index}.${extension}`
 }
 
 const prepareConcatOutput = (path) => {
@@ -59,26 +59,15 @@ const prepareConcatOutput = (path) => {
 	return `${file}.concat.${extension}`
 }
 
-const prepareInput = (start) => S.pipe([
-	fileExists,
-	S.map(libffmpeg.createInput),
-	S.chain(
-		S.encase(
-			libffmpeg.setArgument(
-				libffmpeg.inputArguments.createSeekArgument(start)
-			)
+const prepareFFmpeg = (input) => (start) => (duration) => (output) => S.pipe([
+	S.encase(
+		libffmpeg.setArgument(
+			libffmpeg.ffmpegArguments.createSeekArgument(start)
 		)
-	)
-])
-
-const ffmpegPath = 'ffmpeg'
-
-const prepareFFmpeg = (duration) => (output) => S.pipe([
-	S.chain(S.encase((input) => {
-		const ffmpeg = libffmpeg.createFFmpeg(ffmpegPath)
-
-		return libffmpeg.addInput(input)(ffmpeg)
-	})),
+	),
+	S.chain(
+		S.encase(libffmpeg.addArgument(input))
+	),
 	S.chain(
 		S.encase(
 			libffmpeg.setArgument(
@@ -89,7 +78,7 @@ const prepareFFmpeg = (duration) => (output) => S.pipe([
 	S.chain(
 		S.encase(
 			libffmpeg.setArgument(
-				libffmpeg.inputArguments.createDurationArgument(duration)
+				libffmpeg.ffmpegArguments.createDurationArgument(duration)
 			)
 		)
 	),
@@ -100,39 +89,33 @@ const prepareFFmpeg = (duration) => (output) => S.pipe([
 			)
 		)
 	),
-	// S.chain(
-	// 	S.encase(
-	// 		libffmpeg.setArgument(
-	// 			libffmpeg.createArgument('-vcodec')()('copy')
-	// 		)
-	// 	)
-	// ),
-	// S.chain(
-	// 	S.encase(
-	// 		libffmpeg.setArgument(
-	// 			libffmpeg.createArgument('-acodec')()('copy')
-	// 		)
-	// 	)
-	// ),
 	S.chain(
 		S.encase(
 			libffmpeg.setOutput(output)
 		)
-	)
+	),
+	// S.chain(
+	// 	S.encase(
+	// 		libffmpeg.run
+	// 	)
+	// )
 ])
 
-const prepareConcatFFmpeg = (output) => S.pipe([
-	S.chain(S.encase((input) => {
-		const ffmpeg = libffmpeg.createFFmpeg(ffmpegPath)
-
-		return libffmpeg.addInput(input)(ffmpeg)
-	})),
+const prepareConcatFFmpeg = (input) => (output) => S.pipe([
+	S.encase(
+		libffmpeg.setArgument(
+			libffmpeg.createArgument('-f')()('concat')
+		)
+	),
 	S.chain(
 		S.encase(
 			libffmpeg.setArgument(
-				libffmpeg.ffmpegArguments.createOverrideArgument()
+				libffmpeg.createArgument('-safe')()('0')
 			)
 		)
+	),
+	S.chain(
+		S.encase(libffmpeg.addArgument(input))
 	),
 	S.chain(
 		S.encase(
@@ -144,20 +127,18 @@ const prepareConcatFFmpeg = (output) => S.pipe([
 	S.chain(
 		S.encase(
 			libffmpeg.setArgument(
-				libffmpeg.createArgument('-f')()('concat')
-			)
-		)
-	),
-	S.chain(
-		S.encase(
-			libffmpeg.setArgument(
-				libffmpeg.createArgument('-safe')()('0')
+				libffmpeg.ffmpegArguments.createOverrideArgument()
 			)
 		)
 	),
 	S.chain(
 		S.encase(
 			libffmpeg.setOutput(output)
+		)
+	),
+	S.chain(
+		S.encase(
+			libffmpeg.run
 		)
 	)
 ])
@@ -177,13 +158,11 @@ export const handler = (argv) => {
 
 		const output = prepareOutput(argv.input)(i + 1)
 
-		const input = prepareInput(clipStart)(argv.input)
+		const input = libffmpeg.ffmpegArguments.createInputArgument(argv.input)
 
-		const ffmpeg = prepareFFmpeg(clipDuration)(output)(input)
+		const ffmpeg = prepareFFmpeg(input)(clipStart)(clipDuration)(output)(libffmpeg.createFFmpeg())
 
 		if (S.isRight(ffmpeg)) {
-			// console.log(libffmpeg.compileFFmpeg(ffmpeg.value))
-			// libffmpeg.run(ffmpeg.value)
 			clips.push(output)
 			console.log('done', output)
 		}
@@ -191,15 +170,12 @@ export const handler = (argv) => {
 
 	const concatOutput = prepareConcatOutput(argv.input)
 
-	const concatInput = S.Right(libffmpeg.createInput('/Users/bernhardesperester/git/node-ffmpeg/data/mylist.txt'))
-	const concatFFmpeg = prepareConcatFFmpeg(concatOutput)(concatInput)
-
-	// console.log(libffmpeg.compileInput(concatInput.value))
-	// console.log(libffmpeg.compileFFmpeg(concatFFmpeg.value))
+	const concatInput = libffmpeg.ffmpegArguments.createInputArgument('/Users/bernhardesperester/git/node-ffmpeg/data/mylist.txt')
+	const concatFFmpeg = prepareConcatFFmpeg(concatInput)(concatOutput)(libffmpeg.createFFmpeg())
 
 	if (S.isRight(concatFFmpeg)) {
-		console.log(libffmpeg.compileFFmpeg(concatFFmpeg.value))
-		const { stdout, stderr } = libffmpeg.run(concatFFmpeg.value)
+		const { stdout, stderr } = concatFFmpeg.value.result
+
 		console.log(stdout, stderr)
 		console.log('done', concatOutput)
 	}

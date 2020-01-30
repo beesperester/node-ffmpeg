@@ -23,23 +23,8 @@ export const builder = (yargs) => {
 		})
 }
 
-const fileExists = (file) => {
-	return fs.existsSync(file) ? S.Right(file) : S.Left(new Error(`Missing file at ${file}`))
-}
-
-const prepareInput = S.pipe([
-	fileExists,
-	S.map(libffmpeg.createInput)
-])
-
-const ffmpegPath = 'ffprobe'
-
-const prepareFFmpeg = S.pipe([
-	S.chain(S.encase((input) => {
-		const ffmpeg = libffmpeg.createFFmpeg(ffmpegPath)
-
-		return libffmpeg.addInput(input)(ffmpeg)
-	})),
+const prepareFFmpeg = (input) => S.pipe([
+	S.encase(libffmpeg.addArgument(input)),
 	S.chain(
 		S.encase(
 			libffmpeg.setArgument(
@@ -60,36 +45,27 @@ const prepareFFmpeg = S.pipe([
 				libffmpeg.createArgument('-of')()('csv=p=0')
 			)
 		)
+	),
+	S.chain(
+		S.encase(
+			libffmpeg.run
+		)
 	)
 ])
 
 export const probeDuration = (path) => {
-	const input = prepareInput(path)
+	const input = libffmpeg.ffmpegArguments.createInputArgument(path)
 
-	const ffmpeg = prepareFFmpeg(input)
+	const ffmpeg = prepareFFmpeg(input)(libffmpeg.createFFmpeg('ffprobe'))
 
 	if (S.isRight(ffmpeg)) {
-		const { stdout } = libffmpeg.run(ffmpeg.value)
-
-		return Math.floor(stdout)
+		return Math.floor(ffmpeg.value.result.stdout)
 	}
 }
 
 export const handler = (argv) => {
 	if (argv.duration) {
-		const input = prepareInput(argv)(argv.input)
-
-		const ffmpeg = prepareFFmpeg(argv)(input)
-
-		if (S.isRight(ffmpeg)) {
-			libffmpeg.run((data) => {
-				console.log(Math.floor(data));
-			})((data) => {
-				// console.log(data);
-			})((code) => {
-				// console.log('child process exited with code ' + code);
-			})(ffmpeg.value)
-		}
+		console.log(probeDuration(argv.input))
 	}
 }
 
