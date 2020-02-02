@@ -1,6 +1,8 @@
+// Node related imports
 import fs from 'fs'
 import S from 'sanctuary'
 
+// App related imports
 import { libffmpeg } from '../ffmpeg'
 import { compileFFmpeg } from '../ffmpeg/ffmpeg'
 
