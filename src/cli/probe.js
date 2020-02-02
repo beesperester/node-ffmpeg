@@ -25,35 +25,7 @@ export const builder = (yargs) => {
 		})
 }
 
-const prepareFFmpeg = (input) => S.pipe([
-	S.encase(libffmpeg.addArgument(input)),
-	S.chain(
-		S.encase(
-			libffmpeg.setArgument(
-				libffmpeg.createArgument('-show_entries')()('format=duration')
-			)
-		)
-	),
-	S.chain(
-		S.encase(
-			libffmpeg.setArgument(
-				libffmpeg.createArgument('-v')()('quiet')
-			)
-		)
-	),
-	S.chain(
-		S.encase(
-			libffmpeg.setArgument(
-				libffmpeg.createArgument('-of')()('csv=p=0')
-			)
-		)
-	),
-	S.chain(
-		S.encase(
-			libffmpeg.run
-		)
-	)
-])
+
 
 export const probeDuration = (path) => {
 	const input = libffmpeg.ffmpegArguments.createInputArgument(path)
