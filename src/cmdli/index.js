@@ -8,10 +8,7 @@ export const createCMD = (path) => {
 	return {
 		path: path,
 		arguments: [],
-		result: {
-			stdout: '',
-			stderr: ''
-		}
+		result: createResult('')('')
 	}
 }
 
@@ -29,8 +26,6 @@ export const setResult = (result) => (cmd) => {
 export const addArgument = (argument) => (cmd) => {
 	utilities.assertType(createCMD())(cmd)
 
-	utilities.assertConstraints(argument)(cmd)
-
 	return {
 		...cmd,
 		arguments: [
@@ -42,8 +37,6 @@ export const addArgument = (argument) => (cmd) => {
 
 export const setArgument = (argument) => (cmd) => {
 	utilities.assertType(createCMD())(cmd)
-
-	utilities.assertConstraints(argument)(cmd)
 
 	const filteredArguments = cmd.arguments.filter((x) => {
 		return x.argument != argument.argument
@@ -93,9 +86,12 @@ export const compileArgument = (argument) => {
 }
 
 export const compileCMD = (cmd) => {
-	let cmdAguments = cmd.arguments.map(compileArgument).reduce(utilities.reduceArray, [])
+  // assert constraints for all arguments
+  cmd.arguments.forEach((argument) => {
+	  utilities.assertConstraints(argument)(cmd)
+  })
 
-	return cmdAguments
+	return cmd.arguments.map(compileArgument).reduce(utilities.reduceArray, [])
 }
 
 export const run = (cmd) => {
