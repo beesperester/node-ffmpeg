@@ -1,7 +1,8 @@
 import S from 'sanctuary'
-import { noop } from 'utlities'
+import { noop } from './utilities'
 import { setArgument } from '../cmdli'
 import { ffmpegArguments } from '../ffmpeg'
+import { ffprobeArguments } from '../ffprobe'
 
 // ffmpeg presets
 const stereoVr180x180to2d = (width) => (height) => S.pipe([
@@ -59,11 +60,13 @@ export const baseSetup = (config) => S.pipe([
     )
     : noop),
 
-  S.chain(
-    S.encase(
-      setArgument(ffmpegArguments.input(config.input))
+  (config.input
+    ? S.chain(
+      S.encase(
+        setArgument(ffmpegArguments.input(config.input))
+      )
     )
-  ),
+    : noop),
 
   (config.override
     ? S.chain(
@@ -74,9 +77,35 @@ export const baseSetup = (config) => S.pipe([
     : noop)
 ])
 
+export const duration = S.pipe([
+  S.chain(
+    S.encase(
+      setArgument(
+        ffprobeArguments.showEntries('format=duration')
+      )
+    )
+  ),
+  S.chain(
+    S.encase(
+      setArgument(
+        ffprobeArguments.verbosity('quiet')
+      )
+    )
+  ),
+  S.chain(
+    S.encase(
+      setArgument(
+        ffprobeArguments.outputFormat('csv=p=0')
+      )
+    )
+  )
+])
+
 export const presets = {
   stereoVr180x180to2d,
-  gif
+  gif,
+  baseSetup,
+  duration
 }
 
 export default presets
