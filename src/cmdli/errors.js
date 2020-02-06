@@ -1,7 +1,7 @@
 export class CmdliConstraintError extends Error {
-	constructor(message) {
-		super(message)
+  constructor (message) {
+    super(message)
 
-		this.name = 'CmdliConstraintError'
-	}
+    this.name = 'CmdliConstraintError'
+  }
 }
