@@ -50,7 +50,7 @@ const stereoVrToMono = (config) => S.pipe([
               'v360=equirect',
               'flat',
               'h_fov=120',
-              'v_fov=70',
+              'v_fov=90',
               // 'ih_fov=180',
               // 'iv_fov=180',
               // 'in_stereo=sbs',
