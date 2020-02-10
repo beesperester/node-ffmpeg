@@ -1,4 +1,4 @@
-import { constraintFlags, createArgument, createCMD, createConstraint } from '../cmdli'
+import { constraintFlags, createArgument, createCMD, createConstraint, setArgument } from '../cmdli'
 
 export const createFFmpeg = (path) => createCMD(path || 'ffmpeg')
 
@@ -31,6 +31,21 @@ export const ffmpegArguments = {
   filterComplex: createArgument('-filter_complex')([
     createConstraint('-vf')(constraintFlags.mustNotExist)
   ])
+}
+
+export const setVideoFilterArgument = (videoFilterArgument) => (ffmpeg) => {
+  const videoFilterArguments = [
+    ...ffmpeg.arguments.filter((argument) => argument.argument === '-vf'),
+    videoFilterArgument
+  ]
+
+  if (videoFilterArguments.length > 0) {
+    const argumentString = videoFilterArguments.map((argument) => argument.value).join(',')
+
+    return setArgument(ffmpegArguments.videoFilter(argumentString))(ffmpeg)
+  } else {
+    return setArgument(videoFilterArgument)(ffmpeg)
+  }
 }
 
 export default {
