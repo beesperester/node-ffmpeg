@@ -1,7 +1,4 @@
-import path from 'path'
 import { convertGif } from '../../presets'
-import { getFileComponents } from '../../utilities'
-import temp from 'temp'
 
 export const command = 'gif <input> [number,duration,override,width,height]'
 
