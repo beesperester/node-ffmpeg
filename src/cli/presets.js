@@ -144,6 +144,46 @@ export const inputTransform = (config) => S.pipe([
   stereoToMono(config)
 ])
 
+export const convertGif = (config) => {
+  if (!config.input) throw new Error('Missing input')
+
+  const { dirname, filename } = getFileComponents(config.input)
+
+  const output = path.join(dirname, `${filename}.gif`)
+
+  const processConfig = {
+    output,
+    ...config
+  }
+
+  delete processConfig.width
+  delete processConfig.height
+
+  console.log(`Extract gif to ${processConfig.output}`)
+
+  const process = S.pipe([
+    inputSetup(processConfig),
+
+    S.chain(
+      S.encase(
+        setArgument(
+          ffmpegArguments.filterComplex(`[0:v] fps=12,scale=w=${config.width}:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1`)
+        )
+      )
+    ),
+
+    outputSetup(processConfig)
+  ])(attempt(createFFmpeg))
+
+  const result = fork(process)
+
+  if (S.isRight(result)) {
+    return processConfig.output
+  } else {
+    throw result.value
+  }
+}
+
 export const extractClip = (config) => {
   if (!config.input) throw new Error('Missing input')
 
