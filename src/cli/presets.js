@@ -49,16 +49,20 @@ const stereoVrToMono = (config) => S.pipe([
             [
               'v360=equirect',
               'flat',
-              'ih_fov=180',
-              'iv_fov=180',
-              'yaw=90',
+              'h_fov=120',
+              'v_fov=70',
+              // 'ih_fov=180',
+              // 'iv_fov=180',
+              // 'in_stereo=sbs',
+              // 'out_stereo=2d',
+              'yaw=90'
               // 'pitch=-10',
-              (config.width
-                ? `w=${config.width}`
-                : undefined),
-              (config.height
-                ? `h=${config.height}`
-                : undefined)
+              // (config.width
+              //   ? `w=${config.width}`
+              //   : undefined),
+              // (config.height
+              //   ? `h=${config.height}`
+              //   : undefined)
             ].filter(noop).join(':'))
         )
       )
@@ -81,14 +85,6 @@ const stereoToMono = (config) => S.pipe([
 ])
 
 export const outputSetup = (config) => S.pipe([
-  (config.override
-    ? S.chain(
-      S.encase(
-        setArgument(ffmpegArguments.override())
-      )
-    )
-    : noop),
-
   (config.width && !config.height
     ? S.chain(
       S.encase(
@@ -121,6 +117,14 @@ export const outputSetup = (config) => S.pipe([
       S.encase(
         setVideoFilterArgument(ffmpegArguments.videoFilter(`setdar=${config.aspectRatio}`)
         )
+      )
+    )
+    : noop),
+
+  (config.override
+    ? S.chain(
+      S.encase(
+        setArgument(ffmpegArguments.override())
       )
     )
     : noop),

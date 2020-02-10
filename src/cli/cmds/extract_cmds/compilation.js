@@ -15,12 +15,12 @@ export const builder = (yargs) => {
     })
     .option('number', {
       describe: 'number of clips',
-      default: 5,
+      default: 30,
       type: 'number'
     })
     .option('duration', {
       describe: 'duration of trailer',
-      default: 5,
+      default: 30,
       type: 'number'
     })
     .option('override', {
@@ -66,7 +66,8 @@ export const handler = (argv) => {
 
     concatClips({
       input: clips,
-      output
+      output,
+      override: argv.override
     })
 
     console.log(output)

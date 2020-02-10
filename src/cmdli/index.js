@@ -88,6 +88,8 @@ export const compileCMD = cmd => {
 export const run = cmd => {
   const args = compileCMD(cmd)
 
+  console.log(args.join(' '))
+
   const { stdout, stderr } = spawnSync(cmd.path, args)
 
   const result = createResult(stdout.toString('utf8'))(stderr.toString('utf8'))
