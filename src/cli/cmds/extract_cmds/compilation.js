@@ -64,8 +64,7 @@ export const handler = (argv) => {
 
     const output = path.join(dirname, `${filename}.compilation${extension}`)
 
-    concatClips({
-      input: clips,
+    concatClips(clips)({
       output,
       override: argv.override
     })

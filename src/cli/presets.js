@@ -147,8 +147,6 @@ export const inputTransform = (config) => S.pipe([
 export const extractClip = (config) => {
   if (!config.input) throw new Error('Missing input')
 
-  console.log(`Extract clip of ${config.input}`)
-
   const { dirname, filename, extension } = getFileComponents(config.input)
 
   const output = path.join(dirname, `${filename}.clip${extension}`)
@@ -157,6 +155,8 @@ export const extractClip = (config) => {
     output,
     ...config
   }
+
+  console.log(`Extract clip to ${processConfig.output}`)
 
   const process = S.pipe([
     inputSetup(processConfig),
@@ -209,22 +209,35 @@ export const concat = (config) => S.pipe([
   )
 ])
 
-export const concatClips = (config) => {
-  if (!config.input) throw new Error('Missing input')
+export const concatClips = (clips) => (config) => {
+  if (!clips.length > 0) throw new Error('Missing clips')
   if (!config.output) throw new Error('Missing output')
 
-  console.log(`Concat clips of ${config.input}`)
+  const { dirname, filename } = getFileComponents(clips[0])
+
+  const list = path.join(dirname, `${filename}.clips.txt`)
+
+  const listData = clips.map((clip) => `file '${clip}'`).join('\n')
+
+  fs.writeFileSync(list, listData)
+
+  const processConfig = {
+    ...config,
+    input: list
+  }
+
+  console.log(`Concat clips to ${processConfig.output}`)
 
   const process = S.pipe([
-    concat(config),
+    concat(processConfig),
 
-    outputSetup(config)
+    outputSetup(processConfig)
   ])(attempt(createFFmpeg))
 
   const result = fork(process)
 
   if (S.isRight(result)) {
-    return config.output
+    return processConfig.output
   } else {
     throw result.value
   }
@@ -232,8 +245,6 @@ export const concatClips = (config) => {
 
 export const extractFrame = (config) => {
   if (!config.input) throw new Error('Missing input')
-
-  console.log(`Extract frame of ${config.input}`)
 
   const { dirname, filename } = getFileComponents(config.input)
 
@@ -243,6 +254,8 @@ export const extractFrame = (config) => {
     output,
     ...config
   }
+
+  console.log(`Extract frame to ${processConfig.output}`)
 
   const process = S.pipe([
     S.chain(
@@ -270,13 +283,13 @@ export const extractFrame = (config) => {
 export const extractFrames = (outputDirectory) => (config) => {
   if (!config.input) throw new Error('Missing input')
 
-  console.log(`Extract frames of of ${config.input}`)
-
   const duration = getDuration(config)
 
   const { filename } = getFileComponents(config.input)
 
   const frames = []
+
+  console.log(`Extract frames from ${config.input}`)
 
   for (let i = 0; i < config.number; i++) {
     let clipStart = (duration / config.number * i) + 1
@@ -302,13 +315,13 @@ export const extractFrames = (outputDirectory) => (config) => {
 export const extractClips = (outputDirectory) => (config) => {
   if (!config.input) throw new Error('Missing input')
 
-  console.log(`Extract clips of ${config.input}`)
-
   const duration = getDuration(config)
 
   const { filename, extension } = getFileComponents(config.input)
 
   const clips = []
+
+  console.log(`Extract clips from ${config.input}`)
 
   for (let i = 0; i < config.number; i++) {
     const clipDuration = config.duration / (config.number - 1)
@@ -336,11 +349,11 @@ export const extractClips = (outputDirectory) => (config) => {
 export const montageFrames = (frames) => (config) => {
   if (!config.output) throw new Error('Missing output')
 
-  console.log('Montage frames')
-
   const processConfig = {
     ...config
   }
+
+  console.log(`Montage frames to ${processConfig.output}`)
 
   const process = S.pipe([
     S.chain(
