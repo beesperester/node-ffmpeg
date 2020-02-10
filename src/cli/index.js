@@ -1,7 +1,7 @@
 import yargs from 'yargs'
 
-(yargs
+yargs
   .commandDir('cmds')
   .demandCommand()
   .help()
-  .argv)()
+  .argv
