@@ -2,7 +2,7 @@ import S from 'sanctuary'
 import path from 'path'
 import fs from 'fs'
 import { attempt, fork, getFileComponents, noop } from './utilities'
-import { setArgument, createArgument } from '../cmdli'
+import { setArgument, addArgument, createArgument, createCMD } from '../cmdli'
 import { createFFmpeg, ffmpegArguments, setVideoFilterArgument } from '../ffmpeg'
 import { createFFprobe, ffprobeArguments } from '../ffprobe'
 
@@ -55,8 +55,8 @@ const stereoVrToMono = (config) => S.pipe([
               // 'iv_fov=180',
               // 'in_stereo=sbs',
               // 'out_stereo=2d',
-              'yaw=90'
-              // 'pitch=-10',
+              'yaw=90',
+              'pitch=-10'
               // (config.width
               //   ? `w=${config.width}`
               //   : undefined),
@@ -230,6 +230,75 @@ export const concatClips = (config) => {
   }
 }
 
+export const extractFrame = (config) => {
+  if (!config.input) throw new Error('Missing input')
+
+  console.log(`Extract frame of ${config.input}`)
+
+  const { dirname, filename } = getFileComponents(config.input)
+
+  const output = path.join(dirname, `${filename}.frame.jpg`)
+
+  const processConfig = {
+    output,
+    ...config
+  }
+
+  const process = S.pipe([
+    S.chain(
+      S.encase(
+        setArgument(createArgument('-accurate_seek')()())
+      )
+    ),
+
+    inputSetup(processConfig),
+
+    inputTransform(processConfig),
+
+    outputSetup(processConfig)
+  ])(attempt(createFFmpeg))
+
+  const result = fork(process)
+
+  if (S.isRight(result)) {
+    return processConfig.output
+  } else {
+    throw result.value
+  }
+}
+
+export const extractFrames = (outputDirectory) => (config) => {
+  if (!config.input) throw new Error('Missing input')
+
+  console.log(`Extract frames of of ${config.input}`)
+
+  const duration = getDuration(config)
+
+  const { filename } = getFileComponents(config.input)
+
+  const frames = []
+
+  for (let i = 0; i < config.number; i++) {
+    let clipStart = (duration / config.number * i) + 1
+
+    if (i + 1 === config.number) {
+      clipStart = duration - 1
+    }
+
+    const output = path.join(outputDirectory, `${filename}.frame.${String(i + 1).padStart(4, '0')}.jpg`)
+
+    const frame = extractFrame({
+      ...config,
+      seek: clipStart,
+      output
+    })
+
+    frames.push(frame)
+  }
+
+  return frames
+}
+
 export const extractClips = (outputDirectory) => (config) => {
   if (!config.input) throw new Error('Missing input')
 
@@ -261,13 +330,69 @@ export const extractClips = (outputDirectory) => (config) => {
     clips.push(clip)
   }
 
-  const list = path.join(outputDirectory, `${filename}.clips.txt`)
+  return clips
+}
 
-  const listData = clips.map((clip) => `file '${clip}'`).join('\n')
+export const montageFrames = (frames) => (config) => {
+  if (!config.output) throw new Error('Missing output')
 
-  fs.writeFileSync(list, listData)
+  console.log('Montage frames')
 
-  return list
+  const processConfig = {
+    ...config
+  }
+
+  const process = S.pipe([
+    S.chain(
+      S.encase(
+        setArgument(createArgument('-mode')()('concatenate'))
+      )
+    ),
+
+    S.chain(
+      S.encase(
+        (montage) => {
+          frames.forEach((frame) => {
+            montage = addArgument(createArgument()()(frame))(montage)
+          })
+
+          return montage
+        }
+      )
+    ),
+
+    S.chain(
+      S.encase(
+        setArgument(createArgument('-tile')()('4x'))
+      )
+    ),
+
+    S.chain(
+      S.encase(
+        setArgument(createArgument('-background')()('#000000'))
+      )
+    ),
+
+    S.chain(
+      S.encase(
+        setArgument(createArgument('-geometry')()(`${Math.floor(config.width / 4)}x`))
+      )
+    ),
+
+    S.chain(
+      S.encase(
+        addArgument(createArgument()()(processConfig.output))
+      )
+    )
+  ])(attempt(() => createCMD('montage')))
+
+  const result = fork(process)
+
+  if (S.isRight(result)) {
+    return processConfig.output
+  } else {
+    throw result.value
+  }
 }
 
 export const getDuration = (config) => {
