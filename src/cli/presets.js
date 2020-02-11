@@ -75,9 +75,19 @@ const stereoToMono = (config) => S.pipe([
     ? S.chain(
       S.encase(
         setVideoFilterArgument(
-          ffmpegArguments.videoFilter([
-            'stereo3d=sbsl:ml'
-          ].join(':'))
+          ffmpegArguments.videoFilter('stereo3d=sbsl:ml')
+        )
+      )
+    )
+    : noop)
+])
+
+const crop = (config) => S.pipe([
+  (config.crop
+    ? S.chain(
+      S.encase(
+        setVideoFilterArgument(
+          ffmpegArguments.videoFilter(`crop=iw*${config.crop}:ih*${config.crop * 1 / 1.5}`)
         )
       )
     )
@@ -141,7 +151,9 @@ export const outputSetup = (config) => S.pipe([
 export const inputTransform = (config) => S.pipe([
   stereoVrToMono(config),
 
-  stereoToMono(config)
+  stereoToMono(config),
+
+  crop(config)
 ])
 
 export const convertGif = (config) => {

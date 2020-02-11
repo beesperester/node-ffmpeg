@@ -3,7 +3,7 @@ import { extractClips, concatClips } from '../../presets'
 import { getFileComponents } from '../../utilities'
 import temp from 'temp'
 
-export const command = 'compilation <input> [number,duration,override,stereoToMono,width,height]'
+export const command = 'compilation <input>'
 
 export const describe = ''
 
@@ -15,12 +15,12 @@ export const builder = (yargs) => {
     })
     .option('number', {
       describe: 'number of clips',
-      default: 30,
+      default: 15,
       type: 'number'
     })
     .option('duration', {
       describe: 'duration of trailer',
-      default: 30,
+      default: 15,
       type: 'number'
     })
     .option('override', {
@@ -49,6 +49,10 @@ export const builder = (yargs) => {
     .option('aspectRatio', {
       describe: 'set output aspect ratio',
       type: 'string'
+    })
+    .option('crop', {
+      describe: 'crop output video (in percent)',
+      type: 'number'
     })
 }
 

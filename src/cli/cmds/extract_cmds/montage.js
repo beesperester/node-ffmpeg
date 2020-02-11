@@ -3,7 +3,7 @@ import { extractFrames, montageFrames } from '../../presets'
 import { getFileComponents } from '../../utilities'
 import temp from 'temp'
 
-export const command = 'montage <input> [number,duration,override,stereoToMono,stereoVrToMono,width,height]'
+export const command = 'montage <input>'
 
 export const describe = ''
 
@@ -46,6 +46,10 @@ export const builder = (yargs) => {
     .option('aspectRatio', {
       describe: 'set output aspect ratio',
       type: 'string'
+    })
+    .option('crop', {
+      describe: 'crop output video (in percent)',
+      type: 'number'
     })
 }
 
