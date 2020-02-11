@@ -2,7 +2,8 @@
   "name": "ffmpeg",
   "version": "1.0.1",
   "description": "",
-  "main": "index.js",
+  "main": "src/cli/index.js",
+  "bin": "src/bin.js",
   "scripts": {
     "test": "node -r esm node_modules/.bin/mocha --timeout 999999 --colors test/**/*.test.js --exit",
     "start": "node index"
