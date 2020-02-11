@@ -96,3 +96,15 @@ export const run = cmd => {
 
   return setResult(result)(cmd)
 }
+
+export const runSync = cmd => {
+  const args = compileCMD(cmd)
+
+  // console.log(args.join(' '))
+
+  const { stdout, stderr } = spawnSync(cmd.path, args)
+
+  const result = createResult(stdout.toString('utf8'))(stderr.toString('utf8'))
+
+  return setResult(result)(cmd)
+}

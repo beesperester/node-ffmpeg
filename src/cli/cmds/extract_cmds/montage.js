@@ -35,12 +35,10 @@ export const builder = (yargs) => {
     })
     .option('width', {
       describe: 'set output width',
-      default: 1920,
       type: 'number'
     })
     .option('height', {
       describe: 'set output height',
-      default: 1080,
       type: 'number'
     })
     .option('aspectRatio', {
