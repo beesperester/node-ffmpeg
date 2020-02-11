@@ -82,12 +82,18 @@ const stereoToMono = (config) => S.pipe([
     : noop)
 ])
 
-const crop = (config) => S.pipe([
-  (config.crop
+const calcAspectRatio = (ratio) => {
+  const [a, b] = ratio.split('/').map(parseFloat)
+
+  return a / b
+}
+
+const crop = ({ crop, cropAspectRatio } = { cropAspectRatio: '3/2' }) => S.pipe([
+  (crop
     ? S.chain(
       S.encase(
         setVideoFilterArgument(
-          ffmpegArguments.videoFilter(`crop=iw*${config.crop}:ih*${config.crop * 1 / 1.5}`)
+          ffmpegArguments.videoFilter(`crop=iw*${crop}:ih*${crop * 1 / calcAspectRatio(cropAspectRatio)}`)
         )
       )
     )
@@ -179,7 +185,7 @@ export const convertGif = (config) => {
     S.chain(
       S.encase(
         setArgument(
-          ffmpegArguments.filterComplex(`[0:v] fps=12,scale=w=${config.width}:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1`)
+          ffmpegArguments.filterComplex(`[0:v] fps=12,scale=w=${config.width}:h=-1,split [a][b];[a] palettegen [p];[b][p] paletteuse`)
         )
       )
     ),

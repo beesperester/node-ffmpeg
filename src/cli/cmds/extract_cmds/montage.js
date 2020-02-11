@@ -51,6 +51,11 @@ export const builder = (yargs) => {
       describe: 'crop output video (in percent)',
       type: 'number'
     })
+    .option('cropAspectRatio', {
+      describe: 'crop aspect ratio',
+      default: '3/2',
+      type: 'string'
+    })
 }
 
 export const handler = (argv) => {
