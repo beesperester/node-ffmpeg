@@ -20,8 +20,20 @@ export const builder = (yargs) => {
     })
     .option('duration', {
       describe: 'duration of trailer',
-      default: 15,
+      default: 30,
       type: 'number'
+    })
+    .option('timeOffsetStart', {
+      describe: 'time offset start',
+      type: 'number'
+    })
+    .option('timeOffsetEnd', {
+      describe: 'time offset end',
+      type: 'number'
+    })
+    .option('pointsOfInterest', {
+      describe: 'points in time of interest',
+      type: 'string'
     })
     .option('override', {
       describe: 'override output',
