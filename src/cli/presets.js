@@ -431,7 +431,7 @@ export const extractClips = (outputDirectory) => (config) => {
     ? configPrepared.pointsOfInterest
       .split(',')
       .map(parseTime)
-      .map((x) => Math.round((x - (clipDuration / 2)) * 10) / 10)
+      .map((x) => Math.round((x - (clipDuration * 0.25)) * 10) / 10)
       .filter((x) => {
         return x > 0 && x < duration
       })
