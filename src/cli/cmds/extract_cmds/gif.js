@@ -1,4 +1,4 @@
-import { convertGif } from '../../presets'
+import { extractGifs } from '../../presets'
 
 export const command = 'gif <input> [number,duration,override,width,height]'
 
@@ -18,12 +18,13 @@ export const builder = (yargs) => {
       describe: 'start point from end of file',
       type: 'string'
     })
-    .option('pointOfInterest', {
-      describe: 'point of interest',
+    .option('pointsOfInterest', {
+      describe: 'points of interest',
       type: 'string'
     })
     .option('duration', {
       describe: 'duration of trailer',
+      default: '5',
       type: 'string'
     })
     .option('override', {
@@ -44,7 +45,7 @@ export const builder = (yargs) => {
 }
 
 export const handler = (argv) => {
-  const gif = convertGif(argv)
+  const gif = extractGifs(argv)
 
   console.log(gif)
 }

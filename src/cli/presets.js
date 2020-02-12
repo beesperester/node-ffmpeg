@@ -162,6 +162,93 @@ export const inputTransform = (config) => S.pipe([
   crop(config)
 ])
 
+export const extractGif = (config) => {
+  if (!config.input) throw new Error('Missing input')
+
+  const configPrepared = prepareConfig(config)
+
+  const { dirname, filename } = getFileComponents(configPrepared.input)
+
+  const output = path.join(dirname, `${filename}.clip.gif`)
+
+  const processConfig = {
+    output,
+    ...configPrepared
+  }
+
+  // remove width and height from processConfig to disable scale video filter
+  delete processConfig.width
+  delete processConfig.height
+
+  console.log(`Extract gif to ${processConfig.output}`)
+
+  const process = S.pipe([
+    inputSetup(processConfig),
+
+    S.chain(
+      S.encase(
+        setArgument(
+          ffmpegArguments.filterComplex(`[0:v] fps=12,scale=w=${configPrepared.width}:h=-1,split [a][b];[a] palettegen [p];[b][p] paletteuse`)
+        )
+      )
+    ),
+
+    outputSetup(processConfig)
+  ])(attempt(createFFmpeg))
+
+  const result = fork(process)
+
+  if (S.isRight(result)) {
+    return processConfig.output
+  } else {
+    throw result.value
+  }
+}
+
+export const extractGifs = (config) => {
+  if (!config.input) throw new Error('Missing input')
+
+  const configPrepared = prepareConfig(config)
+
+  const duration = getDuration(configPrepared)
+
+  const { dirname, filename } = getFileComponents(configPrepared.input)
+
+  const gifs = []
+
+  const pointsOfInterest = (configPrepared.pointsOfInterest
+    ? configPrepared.pointsOfInterest
+      .split(',')
+      .map(parseTime)
+      .map((x) => Math.round((x - (configPrepared.duration * 0.25)) * 10) / 10)
+      .filter((x) => {
+        return x > 0 && x < duration
+      })
+      .map((x) => createPointOfTime(x)(configPrepared.duration))
+    : [])
+
+  const pointsSorted = pointsOfInterest.sort((a, b) => a.start - b.start)
+
+  const pointsMerged = mergePointsOfTime(pointsSorted)
+
+  console.log(`Extract gifs from ${configPrepared.input}`)
+
+  pointsMerged.forEach((point, index) => {
+    const output = path.join(dirname, `${filename}.clip.${index + 1}.gif`)
+
+    const clip = extractClip({
+      ...configPrepared,
+      output,
+      seek: point.start,
+      duration: point.duration
+    })
+
+    gifs.push(clip)
+  })
+
+  return gifs
+}
+
 export const convertGif = (config) => {
   if (!config.input) throw new Error('Missing input')
 
