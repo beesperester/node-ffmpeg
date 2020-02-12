@@ -10,6 +10,22 @@ export const builder = (yargs) => {
       describe: 'path to input video',
       type: 'string'
     })
+    .option('seek', {
+      describe: 'start point',
+      type: 'string'
+    })
+    .option('seekeof', {
+      describe: 'start point from end of file',
+      type: 'string'
+    })
+    .option('pointOfInterest', {
+      describe: 'point of interest',
+      type: 'string'
+    })
+    .option('duration', {
+      describe: 'duration of trailer',
+      type: 'string'
+    })
     .option('override', {
       describe: 'override output',
       default: false,

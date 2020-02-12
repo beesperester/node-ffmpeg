@@ -165,17 +165,23 @@ export const inputTransform = (config) => S.pipe([
 export const convertGif = (config) => {
   if (!config.input) throw new Error('Missing input')
 
-  const { dirname, filename } = getFileComponents(config.input)
+  const configPrepared = prepareConfig(config)
+
+  const { dirname, filename } = getFileComponents(configPrepared.input)
 
   const output = path.join(dirname, `${filename}.gif`)
 
   const processConfig = {
     output,
-    ...config
+    ...configPrepared
   }
 
   delete processConfig.width
   delete processConfig.height
+
+  if (config.pointOfInterest && processConfig.duration) {
+    processConfig.seek = Math.round((parseTime(config.pointOfInterest) - (processConfig.duration * 0.25)) * 10) / 10
+  }
 
   console.log(`Extract gif to ${processConfig.output}`)
 
@@ -185,7 +191,7 @@ export const convertGif = (config) => {
     S.chain(
       S.encase(
         setArgument(
-          ffmpegArguments.filterComplex(`[0:v] fps=12,scale=w=${config.width}:h=-1,split [a][b];[a] palettegen [p];[b][p] paletteuse`)
+          ffmpegArguments.filterComplex(`[0:v] fps=12,scale=w=${configPrepared.width}:h=-1,split [a][b];[a] palettegen [p];[b][p] paletteuse`)
         )
       )
     ),
@@ -205,13 +211,15 @@ export const convertGif = (config) => {
 export const extractClip = (config) => {
   if (!config.input) throw new Error('Missing input')
 
-  const { dirname, filename, extension } = getFileComponents(config.input)
+  const configPrepared = prepareConfig(config)
+
+  const { dirname, filename, extension } = getFileComponents(configPrepared.input)
 
   const output = path.join(dirname, `${filename}.clip${extension}`)
 
   const processConfig = {
     output,
-    ...config
+    ...configPrepared
   }
 
   console.log(`Extract clip to ${processConfig.output}`)
@@ -271,6 +279,8 @@ export const concatClips = (clips) => (config) => {
   if (!clips.length > 0) throw new Error('Missing clips')
   if (!config.output) throw new Error('Missing output')
 
+  const configPrepared = prepareConfig(config)
+
   const { dirname, filename } = getFileComponents(clips[0])
 
   const list = path.join(dirname, `${filename}.clips.txt`)
@@ -280,7 +290,7 @@ export const concatClips = (clips) => (config) => {
   fs.writeFileSync(list, listData)
 
   const processConfig = {
-    ...config,
+    ...configPrepared,
     input: list
   }
 
@@ -304,13 +314,15 @@ export const concatClips = (clips) => (config) => {
 export const extractFrame = (config) => {
   if (!config.input) throw new Error('Missing input')
 
-  const { dirname, filename } = getFileComponents(config.input)
+  const configPrepared = prepareConfig(config)
+
+  const { dirname, filename } = getFileComponents(configPrepared.input)
 
   const output = path.join(dirname, `${filename}.frame.jpg`)
 
   const processConfig = {
     output,
-    ...config
+    ...configPrepared
   }
 
   console.log(`Extract frame to ${processConfig.output}`)
@@ -341,25 +353,27 @@ export const extractFrame = (config) => {
 export const extractFrames = (outputDirectory) => (config) => {
   if (!config.input) throw new Error('Missing input')
 
-  const duration = getDuration(config)
+  const configPrepared = prepareConfig(config)
 
-  const { filename } = getFileComponents(config.input)
+  const duration = getDuration(configPrepared)
+
+  const { filename } = getFileComponents(configPrepared.input)
 
   const frames = []
 
-  console.log(`Extract frames from ${config.input}`)
+  console.log(`Extract frames from ${configPrepared.input}`)
 
-  for (let i = 0; i < config.number; i++) {
-    let clipStart = (duration / config.number * i) + 1
+  for (let i = 0; i < configPrepared.number; i++) {
+    let clipStart = (duration / configPrepared.number * i) + 1
 
-    if (i + 1 === config.number) {
+    if (i + 1 === configPrepared.number) {
       clipStart = duration - 1
     }
 
     const output = path.join(outputDirectory, `${filename}.frame.${String(i + 1).padStart(4, '0')}.jpg`)
 
     const frame = extractFrame({
-      ...config,
+      ...configPrepared,
       seek: clipStart,
       output
     })
@@ -370,10 +384,35 @@ export const extractFrames = (outputDirectory) => (config) => {
   return frames
 }
 
+export const prepareConfig = (config) => S.pipe([
+  (config.duration
+    ? (x) => ({
+      ...x,
+      duration: parseTime(config.duration)
+    })
+    : noop),
+
+  (config.seek
+    ? (x) => ({
+      ...x,
+      seek: parseTime(config.seek)
+    })
+    : noop),
+
+  (config.seekeof
+    ? (x) => ({
+      ...x,
+      seekeof: parseTime(config.seekeof)
+    })
+    : noop)
+])(config)
+
 export const extractClips = (outputDirectory) => (config) => {
   if (!config.input) throw new Error('Missing input')
 
-  const duration = getDuration(config)
+  const configPrepared = prepareConfig(config)
+
+  const duration = getDuration(configPrepared)
 
   // const timeOffset = config.timeOffsetStart + config.timeOffsetEnd
 
@@ -381,15 +420,15 @@ export const extractClips = (outputDirectory) => (config) => {
   //   duration = duration - timeOffset
   // }
 
-  const { filename, extension } = getFileComponents(config.input)
+  const { filename, extension } = getFileComponents(configPrepared.input)
 
   const clips = []
 
-  const clipDuration = config.duration / (config.number - 1)
-  const clipInterval = duration / config.number
+  const clipDuration = configPrepared.duration / (configPrepared.number - 1)
+  const clipInterval = duration / configPrepared.number
 
-  const pointsOfInterest = (config.pointsOfInterest
-    ? config.pointsOfInterest
+  const pointsOfInterest = (configPrepared.pointsOfInterest
+    ? configPrepared.pointsOfInterest
       .split(',')
       .map(parseTime)
       .map((x) => Math.round((x - (clipDuration / 2)) * 10) / 10)
@@ -403,7 +442,7 @@ export const extractClips = (outputDirectory) => (config) => {
     ...pointsOfInterest
   ]
 
-  for (let i = 0; i < config.number; i++) {
+  for (let i = 0; i < configPrepared.number; i++) {
     const start = Math.round((clipInterval * i) * 10) / 10
 
     points.push(createPointOfTime(start)(clipDuration))
@@ -417,13 +456,13 @@ export const extractClips = (outputDirectory) => (config) => {
 
   // throw new Error('foo')
 
-  console.log(`Extract clips from ${config.input}`)
+  console.log(`Extract clips from ${configPrepared.input}`)
 
   pointsMerged.forEach((point, index) => {
     const output = path.join(outputDirectory, `${filename}.clip.${index + 1}${extension}`)
 
     const clip = extractClip({
-      ...config,
+      ...configPrepared,
       output,
       seek: point.start,
       duration: point.duration
@@ -438,11 +477,9 @@ export const extractClips = (outputDirectory) => (config) => {
 export const montageFrames = (frames) => (config) => {
   if (!config.output) throw new Error('Missing output')
 
-  const processConfig = {
-    ...config
-  }
+  const configPrepared = prepareConfig(config)
 
-  console.log(`Montage frames to ${processConfig.output}`)
+  console.log(`Montage frames to ${configPrepared.output}`)
 
   const process = S.pipe([
     S.chain(
@@ -483,7 +520,7 @@ export const montageFrames = (frames) => (config) => {
 
     S.chain(
       S.encase(
-        addArgument(createArgument()()(processConfig.output))
+        addArgument(createArgument()()(configPrepared.output))
       )
     )
   ])(attempt(() => createCMD('montage')))
@@ -491,7 +528,7 @@ export const montageFrames = (frames) => (config) => {
   const result = fork(process)
 
   if (S.isRight(result)) {
-    return processConfig.output
+    return configPrepared.output
   } else {
     throw result.value
   }
@@ -500,13 +537,15 @@ export const montageFrames = (frames) => (config) => {
 export const getDuration = (config) => {
   if (!config.input) throw new Error('Missing input')
 
-  console.log(`Get duration of ${config.input}`)
+  const configPrepared = prepareConfig(config)
+
+  console.log(`Get duration of ${configPrepared.input}`)
 
   const process = S.pipe([
     S.chain(
       S.encase(
         setArgument(
-          ffprobeArguments.input(config.input)
+          ffprobeArguments.input(configPrepared.input)
         )
       )
     ),
