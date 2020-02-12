@@ -1,7 +1,7 @@
 import S from 'sanctuary'
 import path from 'path'
 import fs from 'fs'
-import { attempt, fork, getFileComponents, noop } from './utilities'
+import { attempt, fork, getFileComponents, noop, parseTime, createPointOfTime, mergePointsOfTime } from './utilities'
 import { setArgument, addArgument, createArgument, createCMD } from '../cmdli'
 import { createFFmpeg, ffmpegArguments, setVideoFilterArgument } from '../ffmpeg'
 import { createFFprobe, ffprobeArguments } from '../ffprobe'
@@ -391,62 +391,42 @@ export const extractClips = (outputDirectory) => (config) => {
   const pointsOfInterest = (config.pointsOfInterest
     ? config.pointsOfInterest
       .split(',')
-      .map((time) => {
-        const parts = time.split(':')
-
-        return parts.reduce((previousValue, currentValue, currentIndex) => {
-          const multiplier = (parts.length - (currentIndex + 1)) * 60
-
-          let value = parseFloat(currentValue)
-
-          if (multiplier > 0) {
-            value = value * multiplier
-          }
-
-          return previousValue + value
-        }, 0)
-      })
+      .map(parseTime)
       .map((x) => Math.round((x - (clipDuration / 2)) * 10) / 10)
       .filter((x) => {
         return x > 0 && x < duration
       })
+      .map((x) => createPointOfTime(x)(clipDuration))
     : [])
 
-  const points = []
-
-  for (let i = 0; i < config.number; i++) {
-    const point = Math.round((clipInterval * i) * 10) / 10
-
-    const collisionPoints = pointsOfInterest.filter((pointOfInterest) => {
-      return ((pointOfInterest - (clipInterval / 2)) < point && point < (pointOfInterest + (clipInterval / 2)))
-    })
-
-    if (!collisionPoints.length > 0) {
-      points.push(point)
-    }
-  }
-
-  const pointsMerged = [
-    ...points,
+  const points = [
     ...pointsOfInterest
   ]
 
-  const pointsSorted = pointsMerged.sort((a, b) => a - b)
+  for (let i = 0; i < config.number; i++) {
+    const start = Math.round((clipInterval * i) * 10) / 10
 
-  // console.log(pointsOfInterest)
+    points.push(createPointOfTime(start)(clipDuration))
+  }
+
+  const pointsSorted = points.sort((a, b) => a.start - b.start)
+
+  const pointsMerged = mergePointsOfTime(pointsSorted)
+
+  // console.log(pointsMerged)
 
   // throw new Error('foo')
 
   console.log(`Extract clips from ${config.input}`)
 
-  pointsSorted.forEach((point, index) => {
+  pointsMerged.forEach((point, index) => {
     const output = path.join(outputDirectory, `${filename}.clip.${index + 1}${extension}`)
 
     const clip = extractClip({
       ...config,
       output,
-      seek: point,
-      duration: clipDuration
+      seek: point.start,
+      duration: point.duration
     })
 
     clips.push(clip)
