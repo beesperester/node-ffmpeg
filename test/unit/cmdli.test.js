@@ -1,11 +1,13 @@
 // Test related imports.
 import 'chai/register-expect'
+import { expect } from 'chai'
+import { describe, it } from 'mocha'
 
 import * as libcmdli from '../../src/cmdli'
 
-describe('tests cmdli module', function() {
-  describe('tests creation', function() {
-    it('createCMD', function() {
+describe('tests cmdli module', function () {
+  describe('tests creation', function () {
+    it('createCMD', function () {
       const received = libcmdli.createCMD('ffmpeg')
       const expected = {
         path: 'ffmpeg',
@@ -19,7 +21,7 @@ describe('tests cmdli module', function() {
       expect(received).to.deep.equal(expected)
     })
 
-    it('createConstraint', function() {
+    it('createConstraint', function () {
       const received = libcmdli.createConstraint('-ss')(libcmdli.constraintFlags.mustExist)
       const expected = {
         argument: '-ss',
@@ -29,7 +31,7 @@ describe('tests cmdli module', function() {
       expect(received).to.deep.equal(expected)
     })
 
-    it('createArgument', function() {
+    it('createArgument', function () {
       const received = libcmdli.createArgument('-ss')()(5)
       const expected = {
         argument: '-ss',
@@ -41,8 +43,8 @@ describe('tests cmdli module', function() {
     })
   })
 
-  describe('tests flow', function() {
-    it('addArgument', function() {
+  describe('tests flow', function () {
+    it('addArgument', function () {
       const cmd = libcmdli.createCMD('ffmpeg')
       const argument = libcmdli.createArgument('-ss')()(5)
 
@@ -53,7 +55,7 @@ describe('tests cmdli module', function() {
           {
             argument: '-ss',
             constraints: [],
-            value: '5' 
+            value: '5'
           }
         ],
         result: {
@@ -65,7 +67,7 @@ describe('tests cmdli module', function() {
       expect(received).to.deep.equal(expected)
     })
 
-    it('setArgument', function() {
+    it('setArgument', function () {
       let cmd = libcmdli.createCMD('ffmpeg')
       const firstArgument = libcmdli.createArgument('-ss')()(5)
       const secondArgument = libcmdli.createArgument('-ss')()(10)
@@ -78,7 +80,7 @@ describe('tests cmdli module', function() {
           {
             argument: '-ss',
             constraints: [],
-            value: '10' 
+            value: '10'
           }
         ],
         result: {
