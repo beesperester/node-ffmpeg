@@ -101,24 +101,27 @@ const crop = ({ crop, cropAspectRatio } = { cropAspectRatio: '3/2' }) => S.pipe(
 ])
 
 export const outputSetup = (config) => S.pipe([
+  // set only width, derive height
   (config.width && !config.height
     ? S.chain(
       S.encase(
-        setVideoFilterArgument(ffmpegArguments.videoFilter(`scale=${config.width}:-1`)
+        setVideoFilterArgument(ffmpegArguments.videoFilter(`scale=${config.width}:-2`)
         )
       )
     )
     : noop),
 
+  // set only height, derive width
   (!config.width && config.height
     ? S.chain(
       S.encase(
-        setVideoFilterArgument(ffmpegArguments.videoFilter(`scale=-1:${config.height}`
+        setVideoFilterArgument(ffmpegArguments.videoFilter(`scale=-2:${config.height}`
         ))
       )
     )
     : noop),
 
+  // force width and height
   (config.width && config.height
     ? S.chain(
       S.encase(
@@ -128,6 +131,7 @@ export const outputSetup = (config) => S.pipe([
     )
     : noop),
 
+  // add aspect ratio to video filters
   (config.aspectRatio
     ? S.chain(
       S.encase(
@@ -137,6 +141,16 @@ export const outputSetup = (config) => S.pipe([
     )
     : noop),
 
+  // remove audio from output
+  S.chain(
+    S.encase(
+      setArgument(
+        createArgument('-an')()()
+      )
+    )
+  ),
+
+  // override existing output file
   (config.override
     ? S.chain(
       S.encase(
@@ -162,7 +176,7 @@ export const inputTransform = (config) => S.pipe([
   crop(config)
 ])
 
-export const extractGif = (config) => {
+export const extractGif = async (config) => {
   if (!config.input) throw new Error('Missing input')
 
   const configPrepared = prepareConfig(config)
@@ -196,7 +210,7 @@ export const extractGif = (config) => {
     outputSetup(processConfig)
   ])(attempt(createFFmpeg))
 
-  const result = fork(process)
+  const result = await fork(process)
 
   if (S.isRight(result)) {
     return processConfig.output
@@ -205,16 +219,14 @@ export const extractGif = (config) => {
   }
 }
 
-export const extractGifs = (config) => {
+export const extractGifs = async (config) => {
   if (!config.input) throw new Error('Missing input')
 
   const configPrepared = prepareConfig(config)
 
-  const duration = getDuration(configPrepared)
+  const duration = await getDuration(configPrepared)
 
   const { dirname, filename } = getFileComponents(configPrepared.input)
-
-  const gifs = []
 
   const pointsOfInterest = (configPrepared.pointsOfInterest
     ? configPrepared.pointsOfInterest
@@ -233,23 +245,25 @@ export const extractGifs = (config) => {
 
   console.log(`Extract gifs from ${configPrepared.input}`)
 
-  pointsMerged.forEach((point, index) => {
+  const gifs = Promise.all(pointsMerged.map(async (point, index) => {
     const output = path.join(dirname, `${filename}.clip.${index + 1}.gif`)
 
-    const clip = extractClip({
+    const clip = await extractGif({
       ...configPrepared,
       output,
       seek: point.start,
       duration: point.duration
     })
 
-    gifs.push(clip)
-  })
+    return clip
+  }))
 
   return gifs
 }
 
 export const convertGif = (config) => {
+  throw new Error('deprecated')
+
   if (!config.input) throw new Error('Missing input')
 
   const configPrepared = prepareConfig(config)
@@ -295,7 +309,7 @@ export const convertGif = (config) => {
   }
 }
 
-export const extractClip = (config) => {
+export const extractClip = async (config) => {
   if (!config.input) throw new Error('Missing input')
 
   const configPrepared = prepareConfig(config)
@@ -319,7 +333,7 @@ export const extractClip = (config) => {
     outputSetup(processConfig)
   ])(attempt(createFFmpeg))
 
-  const result = fork(process)
+  const result = await fork(process)
 
   if (S.isRight(result)) {
     return processConfig.output
@@ -362,7 +376,7 @@ export const concat = (config) => S.pipe([
   )
 ])
 
-export const concatClips = (clips) => (config) => {
+export const concatClips = (clips) => async (config) => {
   if (!clips.length > 0) throw new Error('Missing clips')
   if (!config.output) throw new Error('Missing output')
 
@@ -389,7 +403,7 @@ export const concatClips = (clips) => (config) => {
     outputSetup(processConfig)
   ])(attempt(createFFmpeg))
 
-  const result = fork(process)
+  const result = await fork(process)
 
   if (S.isRight(result)) {
     return processConfig.output
@@ -398,7 +412,7 @@ export const concatClips = (clips) => (config) => {
   }
 }
 
-export const extractFrame = (config) => {
+export const extractFrame = async (config) => {
   if (!config.input) throw new Error('Missing input')
 
   const configPrepared = prepareConfig(config)
@@ -428,7 +442,7 @@ export const extractFrame = (config) => {
     outputSetup(processConfig)
   ])(attempt(createFFmpeg))
 
-  const result = fork(process)
+  const result = await fork(process)
 
   if (S.isRight(result)) {
     return processConfig.output
@@ -437,12 +451,12 @@ export const extractFrame = (config) => {
   }
 }
 
-export const extractFrames = (outputDirectory) => (config) => {
+export const extractFrames = (outputDirectory) => async (config) => {
   if (!config.input) throw new Error('Missing input')
 
   const configPrepared = prepareConfig(config)
 
-  const duration = getDuration(configPrepared)
+  const duration = await getDuration(configPrepared)
 
   const { filename } = getFileComponents(configPrepared.input)
 
@@ -459,7 +473,7 @@ export const extractFrames = (outputDirectory) => (config) => {
 
     const output = path.join(outputDirectory, `${filename}.frame.${String(i + 1).padStart(4, '0')}.jpg`)
 
-    const frame = extractFrame({
+    const frame = await extractFrame({
       ...configPrepared,
       seek: clipStart,
       output
@@ -494,22 +508,14 @@ export const prepareConfig = (config) => S.pipe([
     : noop)
 ])(config)
 
-export const extractClips = (outputDirectory) => (config) => {
+export const extractClips = (outputDirectory) => async (config) => {
   if (!config.input) throw new Error('Missing input')
 
   const configPrepared = prepareConfig(config)
 
-  const duration = getDuration(configPrepared)
-
-  // const timeOffset = config.timeOffsetStart + config.timeOffsetEnd
-
-  // if (duration > timeOffset) {
-  //   duration = duration - timeOffset
-  // }
+  const duration = await getDuration(configPrepared)
 
   const { filename, extension } = getFileComponents(configPrepared.input)
-
-  const clips = []
 
   const clipDuration = configPrepared.duration / (configPrepared.number - 1)
   const clipInterval = duration / configPrepared.number
@@ -539,29 +545,25 @@ export const extractClips = (outputDirectory) => (config) => {
 
   const pointsMerged = mergePointsOfTime(pointsSorted)
 
-  // console.log(pointsMerged)
-
-  // throw new Error('foo')
-
   console.log(`Extract clips from ${configPrepared.input}`)
 
-  pointsMerged.forEach((point, index) => {
+  const clips = await Promise.all(pointsMerged.map(async (point, index) => {
     const output = path.join(outputDirectory, `${filename}.clip.${index + 1}${extension}`)
 
-    const clip = extractClip({
+    const clip = await extractClip({
       ...configPrepared,
       output,
       seek: point.start,
       duration: point.duration
     })
 
-    clips.push(clip)
-  })
+    return clip
+  }))
 
   return clips
 }
 
-export const montageFrames = (frames) => (config) => {
+export const montageFrames = (frames) => async (config) => {
   if (!config.output) throw new Error('Missing output')
 
   const configPrepared = prepareConfig(config)
@@ -612,7 +614,7 @@ export const montageFrames = (frames) => (config) => {
     )
   ])(attempt(() => createCMD('montage')))
 
-  const result = fork(process)
+  const result = await fork(process)
 
   if (S.isRight(result)) {
     return configPrepared.output
@@ -621,7 +623,7 @@ export const montageFrames = (frames) => (config) => {
   }
 }
 
-export const getDuration = (config) => {
+export const getDuration = async (config) => {
   if (!config.input) throw new Error('Missing input')
 
   const configPrepared = prepareConfig(config)
@@ -659,7 +661,7 @@ export const getDuration = (config) => {
     )
   ])(attempt(createFFprobe))
 
-  const result = fork(process)
+  const result = await fork(process)
 
   if (S.isRight(result)) {
     const { stdout } = result.value.result

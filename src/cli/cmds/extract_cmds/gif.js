@@ -44,8 +44,8 @@ export const builder = (yargs) => {
     })
 }
 
-export const handler = (argv) => {
-  const gif = extractGifs(argv)
+export const handler = async (argv) => {
+  const gif = await extractGifs(argv)
 
   console.log(gif)
 }

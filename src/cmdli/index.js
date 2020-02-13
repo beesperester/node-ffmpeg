@@ -1,5 +1,5 @@
 // Node related imports
-import { spawnSync } from 'child_process'
+import { spawn, spawnSync } from 'child_process'
 
 // Cmdli related imports
 import * as utilities from './utilities'
@@ -85,16 +85,40 @@ export const compileCMD = cmd => {
   return cmd.arguments.map(compileArgument).reduce(utilities.reduceArray, [])
 }
 
-export const run = cmd => {
+export const run = (onStderr) => (onStdout) => async (cmd) => {
   const args = compileCMD(cmd)
 
   // console.log(args.join(' '))
 
-  const { stdout, stderr } = spawnSync(cmd.path, args)
+  return new Promise((resolve, reject) => {
+    const process = spawn(cmd.path, args)
+    const context = this
 
-  const result = createResult(stdout.toString('utf8'))(stderr.toString('utf8'))
+    let stdout = ''
+    let stderr = ''
 
-  return setResult(result)(cmd)
+    process.stdout.on('data', (data) => {
+      stdout = data.toString('utf8')
+
+      onStdout.call(context, stdout, process)
+    })
+
+    process.stderr.on('data', (data) => {
+      stderr = data.toString('utf8')
+
+      onStderr.call(context, stderr, process)
+    })
+
+    process.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`asdf child process exited with code ${code}`))
+      }
+
+      const result = createResult(stdout)(stderr)
+
+      resolve(setResult(result)(cmd))
+    })
+  })
 }
 
 export const runSync = cmd => {

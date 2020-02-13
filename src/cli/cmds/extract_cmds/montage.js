@@ -61,14 +61,14 @@ export const handler = (argv) => {
 
   const { dirname, filename } = getFileComponents(argv.input)
 
-  temp.mkdir(filename, function (err, tempDirectoryPath) {
+  temp.mkdir(filename, async function (err, tempDirectoryPath) {
     if (err) throw err
 
-    const frames = extractFrames(tempDirectoryPath)(argv)
+    const frames = await extractFrames(tempDirectoryPath)(argv)
 
     const output = path.join(dirname, `${filename}.montage.jpg`)
 
-    montageFrames(frames)({
+    await montageFrames(frames)({
       ...argv,
       output
     })

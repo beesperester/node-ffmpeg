@@ -1,5 +1,5 @@
 import S from 'sanctuary'
-import { run } from '../cmdli'
+import { run, runSync } from '../cmdli'
 import path from 'path'
 
 export const noop = (x) => x
@@ -13,13 +13,42 @@ export const attempt = (f) => {
   }
 }
 
-export const fork = S.pipe([
-  S.chain(
-    S.encase(
-      run
-    )
-  )
-])
+export const fork = async (cmd) => {
+  if (S.isRight(cmd)) {
+    try {
+      const result = await run((data, process) => {
+        // default data
+
+        // handle file exists prompt
+        if (String(data).search('already exists') !== -1) {
+          process.stdin.write('n\n')
+        }
+      })((data) => {
+        // default data
+      })(cmd.value)
+
+      const { stderr } = result.result
+
+      const lines = stderr.split('\n')
+
+      lines.forEach((line) => {
+        if (String(line).search('Error') !== -1) {
+          throw new Error(stderr)
+        }
+      })
+
+      return S.Right(result)
+    } catch (err) {
+      if (String(err).search('Not overwriting - exiting')) {
+        // console.log('foobar')
+      }
+
+      return S.Right(err)
+    }
+  } else {
+    return cmd
+  }
+}
 
 export const getFileComponents = (file) => {
   const dirname = path.dirname(file) // /path/to/file

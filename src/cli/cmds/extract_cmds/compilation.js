@@ -78,14 +78,14 @@ export const handler = (argv) => {
 
   const { dirname, filename, extension } = getFileComponents(argv.input)
 
-  temp.mkdir(filename, function (err, tempDirectoryPath) {
+  temp.mkdir(filename, async function (err, tempDirectoryPath) {
     if (err) throw err
 
-    const clips = extractClips(tempDirectoryPath)(argv)
+    const clips = await extractClips(tempDirectoryPath)(argv)
 
     const output = path.join(dirname, `${filename}.compilation${extension}`)
 
-    concatClips(clips)({
+    await concatClips(clips)({
       output,
       override: argv.override
     })
